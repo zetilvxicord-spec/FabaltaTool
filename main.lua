@@ -153,12 +153,12 @@ local function makeDraggable(dragHandle, targetFrame)
     end)
 end
 
-local CORRECT_KEY = "TOOLSUITE2026"
+local CORRECT_KEY = "7YLhpY0bzXe9AyO5obJa2AOPhFmeIsMQ8sEG8XgE9SEbRJIW2grBBqeCTSb5viIi9d"
 
 local keyFrame = Instance.new("Frame")
 keyFrame.Name = "KeyLock"
-keyFrame.Size = UDim2.new(0, 320, 0, 180)
-keyFrame.Position = UDim2.new(0.5, -160, 0.4, -90)
+keyFrame.Size = UDim2.new(0, 360, 0, 180)
+keyFrame.Position = UDim2.new(0.5, -180, 0.4, -90)
 keyFrame.BackgroundColor3 = THEME.Background
 keyFrame.BorderSizePixel = 0
 keyFrame.Parent = screenGui
@@ -184,8 +184,9 @@ keyInput.PlaceholderText = "Írd be a kulcsot..."
 keyInput.Text = ""
 keyInput.TextColor3 = THEME.Text
 keyInput.PlaceholderColor3 = THEME.TextSub
-keyInput.TextSize = 13
+keyInput.TextSize = 11
 keyInput.Font = THEME.FontRegular
+keyInput.ClearTextOnFocus = false
 keyInput.Parent = keyFrame
 local kiCorner = Instance.new("UICorner") kiCorner.CornerRadius = UDim.new(0, 6) kiCorner.Parent = keyInput
 
@@ -266,6 +267,7 @@ local contentArea = Instance.new("Frame")
 contentArea.Size = UDim2.new(1, -20, 1, -115)
 contentArea.Position = UDim2.new(0, 10, 0, 85)
 contentArea.BackgroundTransparency = 1
+contentArea.ClipsDescendants = true
 contentArea.Parent = panel
 
 local mainToggleKey = Enum.KeyCode[Config.ToggleKey] or Enum.KeyCode.F12
@@ -315,7 +317,7 @@ local currentTab = nil
 
 local function createTab(name)
     local tabBtn = Instance.new("TextButton")
-    tabBtn.Size = UDim2.new(0.235, 0, 1, 0)
+    tabBtn.Size = UDim2.new(0.19, 0, 1, 0)
     tabBtn.BackgroundColor3 = THEME.AccentInactive
     tabBtn.BorderSizePixel = 0
     tabBtn.Text = name
@@ -330,7 +332,11 @@ local function createTab(name)
     scroll.Size = UDim2.new(1, 0, 1, 0)
     scroll.BackgroundTransparency = 1
     scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 3
+    scroll.ScrollBarThickness = 5
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scroll.ScrollingDirection = Enum.ScrollingDirection.Y
+    scroll.Active = true
     registerAccent(scroll, "ScrollBarImageColor3")
     scroll.Visible = false
     scroll.Parent = contentArea
@@ -340,9 +346,11 @@ local function createTab(name)
     list.Padding = UDim.new(0, 8)
     list.Parent = scroll
 
-    list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        scroll.CanvasSize = UDim2.new(0, 0, 0, list.AbsoluteContentSize.Y + 10)
-    end)
+    local pad = Instance.new("UIPadding")
+    pad.PaddingRight = UDim.new(0, 6)
+    pad.PaddingTop = UDim.new(0, 4)
+    pad.PaddingBottom = UDim.new(0, 10)
+    pad.Parent = scroll
 
     tabBtn.MouseButton1Click:Connect(function()
         for _, t in pairs(tabs) do t.Btn.BackgroundColor3 = THEME.AccentInactive t.Page.Visible = false end
@@ -642,6 +650,8 @@ flingDropdownList.BorderSizePixel = 1
 flingDropdownList.BorderColor3 = THEME.Border
 flingDropdownList.Visible = false
 flingDropdownList.ZIndex = 12
+flingDropdownList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+flingDropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
 flingDropdownList.Parent = flingContainer
 
 local fListLayout = Instance.new("UIListLayout") fListLayout.Parent = flingDropdownList
