@@ -4,6 +4,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
+local Lighting = game:GetService("Lighting")
+local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -195,10 +197,9 @@ registerAccent(submitKeyBtn, "BackgroundColor3")
 
 makeDraggable(keyTitle, keyFrame)
 
--- Fő Panel (Szélesebb kialakítás a bal oldali menü miatt)
 local panel = Instance.new("Frame")
 panel.Name = "MainPanel"
-panel.Size = UDim2.new(0, 500, 0, 380)
+panel.Size = UDim2.new(0, 520, 0, 400)
 panel.Position = UDim2.new(0.1, 0, 0.15, 0)
 panel.BackgroundColor3 = THEME.Background
 panel.BorderSizePixel = 0
@@ -210,7 +211,6 @@ local uiScale = Instance.new("UIScale") uiScale.Scale = 1 uiScale.Parent = panel
 local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 10) corner.Parent = panel
 local border = Instance.new("UIStroke") border.Thickness = 1 border.Color = THEME.Border border.Parent = panel
 
--- Fejléc
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, 0, 0, 38)
 header.BackgroundColor3 = THEME.HeaderBg
@@ -221,7 +221,7 @@ local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -60, 1, 0)
 titleLabel.Position = UDim2.new(0, 15, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "⚙️ Fabalta Tool v8.5"
+titleLabel.Text = "⚙️ Fabalta Tool v9.0 (Ultimate)"
 titleLabel.TextColor3 = THEME.Text
 titleLabel.TextSize = 13
 titleLabel.Font = THEME.FontBold
@@ -242,7 +242,6 @@ local cCorner = Instance.new("UICorner") cCorner.CornerRadius = UDim.new(0, 5) c
 
 makeDraggable(header, panel)
 
--- Bal oldali Menü sáv (Sidebar)
 local sidebar = Instance.new("ScrollingFrame")
 sidebar.Size = UDim2.new(0, 130, 1, -68)
 sidebar.Position = UDim2.new(0, 0, 0, 38)
@@ -265,7 +264,6 @@ sidebarPadding.PaddingLeft = UDim.new(0, 8)
 sidebarPadding.PaddingRight = UDim.new(0, 8)
 sidebarPadding.Parent = sidebar
 
--- Tartalom Terület (Jobb oldalon)
 local contentArea = Instance.new("Frame")
 contentArea.Size = UDim2.new(1, -140, 1, -48)
 contentArea.Position = UDim2.new(0, 135, 0, 43)
@@ -293,7 +291,7 @@ local function unlockSuite()
     isUnlocked = true
     keyFrame:Destroy()
     panel.Visible = true
-    notify("Sikeres Belépés", "Üdvözöl a Fabalta Tool!", 3)
+    notify("Sikeres Belépés", "Üdvözöl a Fabalta Tool v9.0!", 3)
 end
 
 submitKeyBtn.MouseButton1Click:Connect(function()
@@ -541,135 +539,13 @@ local function createButton(parentPage, text, callback)
 end
 
 local pageMovement = createTab("Mozgás")
-local pageAnim = createTab("Anim")
-local pageVisuals = createTab("Látvány")
 local pageCombat = createTab("Harcos")
+local pageVisuals = createTab("Látvány")
+local pageAnim = createTab("Anim")
 local pageUtility = createTab("Ezközök")
 local pageSettings = createTab("Beállítások")
 
--- ================= ANIMÁCIÓS CSOMAG MENÜ =================
-local animationPacks = {
-    { Name = "🕺 Zombie Pack", Id = "rbxassetid://616158082" },
-    { Name = "🥷 Ninja Pack", Id = "rbxassetid://656117400" },
-    { Name = "🦸 Hero Pack", Id = "rbxassetid://616111295" },
-    { Name = "🤖 Robot Pack", Id = "rbxassetid://616088211" },
-    { Name = "💃 Dance Pack", Id = "rbxassetid://507771019" }
-}
-
-local currentTrack = nil
-local selectedAnimId = animationPacks[1].Id
-
-local animContainer = Instance.new("Frame")
-animContainer.Size = UDim2.new(1, 0, 0, 75)
-animContainer.BackgroundColor3 = THEME.ContainerBg
-animContainer.BorderSizePixel = 0
-animContainer.ZIndex = 5
-animContainer.Parent = pageAnim
-local acCorner = Instance.new("UICorner") acCorner.CornerRadius = UDim.new(0, 6) acCorner.Parent = animContainer
-
-local animLabel = Instance.new("TextLabel")
-animLabel.Size = UDim2.new(1, -20, 0, 18)
-animLabel.Position = UDim2.new(0, 10, 0, 4)
-animLabel.BackgroundTransparency = 1
-animLabel.Text = "🎭 Animáció Csomagok"
-animLabel.TextColor3 = THEME.Text
-animLabel.TextSize = 11
-animLabel.Font = THEME.FontRegular
-animLabel.TextXAlignment = Enum.TextXAlignment.Left
-animLabel.Parent = animContainer
-
-local animDropdownBtn = Instance.new("TextButton")
-animDropdownBtn.Size = UDim2.new(0.5, -12, 0, 26)
-animDropdownBtn.Position = UDim2.new(0, 10, 0, 38)
-animDropdownBtn.BackgroundColor3 = THEME.AccentInactive
-animDropdownBtn.BorderSizePixel = 0
-animDropdownBtn.Text = animationPacks[1].Name
-animDropdownBtn.TextColor3 = THEME.Text
-animDropdownBtn.TextSize = 10
-animDropdownBtn.Font = THEME.FontRegular
-animDropdownBtn.ZIndex = 6
-animDropdownBtn.Parent = animContainer
-local adbCorner = Instance.new("UICorner") adbCorner.CornerRadius = UDim.new(0, 5) adbCorner.Parent = animDropdownBtn
-
-local toggleAnimBtn = Instance.new("TextButton")
-toggleAnimBtn.Size = UDim2.new(0.5, -12, 0, 26)
-toggleAnimBtn.Position = UDim2.new(0.5, 4, 0, 38)
-toggleAnimBtn.BackgroundColor3 = THEME.Accent
-toggleAnimBtn.BorderSizePixel = 0
-toggleAnimBtn.Text = "▶ Indítás"
-toggleAnimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleAnimBtn.TextSize = 10
-toggleAnimBtn.Font = THEME.FontBold
-toggleAnimBtn.ZIndex = 6
-toggleAnimBtn.Parent = animContainer
-local tabCorner = Instance.new("UICorner") tabCorner.CornerRadius = UDim.new(0, 5) tabCorner.Parent = toggleAnimBtn
-registerAccent(toggleAnimBtn, "BackgroundColor3")
-
-local animDropdownList = Instance.new("ScrollingFrame")
-animDropdownList.Size = UDim2.new(0.5, -12, 0, 100)
-animDropdownList.Position = UDim2.new(0, 10, 0, 66)
-animDropdownList.BackgroundColor3 = THEME.HeaderBg
-animDropdownList.BorderSizePixel = 0
-animDropdownList.Visible = false
-animDropdownList.ZIndex = 20
-animDropdownList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-animDropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
-animDropdownList.ScrollBarThickness = 2
-animDropdownList.Parent = animContainer
-local adlCorner = Instance.new("UICorner") adlCorner.CornerRadius = UDim.new(0, 5) adlCorner.Parent = animDropdownList
-local adlStroke = Instance.new("UIStroke") adlStroke.Color = THEME.Border adlStroke.Parent = animDropdownList
-
-local animListLayout = Instance.new("UIListLayout") animListLayout.Parent = animDropdownList
-
-animDropdownBtn.MouseButton1Click:Connect(function()
-    animDropdownList.Visible = not animDropdownList.Visible
-    if animDropdownList.Visible then
-        for _, child in ipairs(animDropdownList:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
-        for _, pack in ipairs(animationPacks) do
-            local pBtn = Instance.new("TextButton")
-            pBtn.Size = UDim2.new(1, 0, 0, 24)
-            pBtn.BackgroundTransparency = 1
-            pBtn.Text = pack.Name
-            pBtn.TextColor3 = THEME.Text
-            pBtn.TextSize = 10
-            pBtn.Font = THEME.FontRegular
-            pBtn.ZIndex = 21
-            pBtn.Parent = animDropdownList
-            pBtn.MouseButton1Click:Connect(function()
-                selectedAnimId = pack.Id
-                animDropdownBtn.Text = pack.Name
-                animDropdownList.Visible = false
-                if currentTrack then
-                    currentTrack:Stop()
-                    currentTrack = nil
-                    toggleAnimBtn.Text = "▶ Indítás"
-                end
-            end)
-        end
-    end
-end)
-
-toggleAnimBtn.MouseButton1Click:Connect(function()
-    local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-
-    if currentTrack then
-        currentTrack:Stop()
-        currentTrack = nil
-        toggleAnimBtn.Text = "▶ Indítás"
-        notify("Animáció", "Animáció leállítva.", 2)
-    else
-        local anim = Instance.new("Animation")
-        anim.AnimationId = selectedAnimId
-        currentTrack = hum:LoadAnimation(anim)
-        currentTrack:Play()
-        toggleAnimBtn.Text = "⏹ Leállítás"
-        notify("Animáció", "Animáció elindítva!", 2)
-    end
-end)
--- =========================================================
-
+-- ================= MOZGÁS FUNKCIÓK =================
 createSlider(pageMovement, "WalkSpeed", "⚡ Járási Sebesség", 16, 200, 16, function(val)
     local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
     if hum then hum.WalkSpeed = val end
@@ -682,14 +558,23 @@ end)
 
 local infJumpEnabled = false
 createToggle(pageMovement, "InfJump", "🦘 Végtelen Ugrás", false, function(enabled) infJumpEnabled = enabled end)
-
-local jumpConn = UserInputService.JumpRequest:Connect(function()
+table.insert(cleanupConnections, UserInputService.JumpRequest:Connect(function()
     if infJumpEnabled then
         local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
     end
-end)
-table.insert(cleanupConnections, jumpConn)
+end))
+
+local bhopEnabled = false
+createToggle(pageMovement, "Bhop", "🐰 Bunny Hop (Automatikus ugrás)", false, function(enabled) bhopEnabled = enabled end)
+table.insert(cleanupConnections, RunService.Heartbeat:Connect(function()
+    if bhopEnabled then
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum and hum.FloorMaterial ~= Enum.Material.Air then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end))
 
 local noclipEnabled, noclipConn = false, nil
 createToggle(pageMovement, "Noclip", "🧱 Noclip (Falon Átjárás)", false, function(enabled)
@@ -739,6 +624,20 @@ createToggle(pageMovement, "FlyMode", "✈️ Repülés Mód", false, function(e
     end
 end)
 
+createButton(pageMovement, "📍 TP Tool (Ctrl + Kattintás)", function()
+    local mouse = LocalPlayer:GetMouse()
+    local conn
+    conn = mouse.Button1Down:Connect(function()
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
+            notify("Teleport", "Sikeres teleportálás!", 2)
+        end
+    end)
+    table.insert(cleanupConnections, conn)
+    notify("TP Tool", "Aktiválva: Tartsd lenyomva a Ctrl-t és kattints az egérrel!", 4)
+end)
+
+-- ================= HARC FUNKCIÓK =================
 local aimbotEnabled, aimbotConn, aimSmoothness = false, nil, 0.2
 createSlider(pageCombat, "AimSmooth", "🎯 Aimbot Simítás", 1, 10, 2, function(val) aimSmoothness = val / 10 end)
 
@@ -772,155 +671,88 @@ createToggle(pageCombat, "Aimbot", "🎯 Aimbot (RMB Hold)", false, function(ena
     end
 end)
 
-local selectedFlingTarget, flinging, flingConn = nil, false, nil
-
-local flingContainer = Instance.new("Frame")
-flingContainer.Size = UDim2.new(1, 0, 0, 75)
-flingContainer.BackgroundColor3 = THEME.ContainerBg
-flingContainer.BorderSizePixel = 0
-flingContainer.ZIndex = 5
-flingContainer.Parent = pageCombat
-local fcCorner = Instance.new("UICorner") fcCorner.CornerRadius = UDim.new(0, 6) fcCorner.Parent = flingContainer
-
-local flingLabel = Instance.new("TextLabel")
-flingLabel.Size = UDim2.new(1, -20, 0, 18)
-flingLabel.Position = UDim2.new(0, 10, 0, 4)
-flingLabel.BackgroundTransparency = 1
-flingLabel.Text = "🌀 Fling (Kilövés)"
-flingLabel.TextColor3 = THEME.Text
-flingLabel.TextSize = 11
-flingLabel.Font = THEME.FontRegular
-flingLabel.TextXAlignment = Enum.TextXAlignment.Left
-flingLabel.Parent = flingContainer
-
-local flingDropdownBtn = Instance.new("TextButton")
-flingDropdownBtn.Size = UDim2.new(0.5, -12, 0, 26)
-flingDropdownBtn.Position = UDim2.new(0, 10, 0, 38)
-flingDropdownBtn.BackgroundColor3 = THEME.AccentInactive
-flingDropdownBtn.BorderSizePixel = 0
-flingDropdownBtn.Text = "Célpont..."
-flingDropdownBtn.TextColor3 = THEME.TextSub
-flingDropdownBtn.TextSize = 10
-flingDropdownBtn.Font = THEME.FontRegular
-flingDropdownBtn.ZIndex = 6
-flingDropdownBtn.Parent = flingContainer
-local fdbCorner = Instance.new("UICorner") fdbCorner.CornerRadius = UDim.new(0, 5) fdbCorner.Parent = flingDropdownBtn
-
-local executeFlingBtn = Instance.new("TextButton")
-executeFlingBtn.Size = UDim2.new(0.5, -12, 0, 26)
-executeFlingBtn.Position = UDim2.new(0.5, 4, 0, 38)
-executeFlingBtn.BackgroundColor3 = THEME.Accent
-executeFlingBtn.BorderSizePixel = 0
-executeFlingBtn.Text = "🚀 Indítás"
-executeFlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-executeFlingBtn.TextSize = 10
-executeFlingBtn.Font = THEME.FontBold
-executeFlingBtn.ZIndex = 6
-executeFlingBtn.Parent = flingContainer
-local efCorner = Instance.new("UICorner") efCorner.CornerRadius = UDim.new(0, 5) efCorner.Parent = executeFlingBtn
-registerAccent(executeFlingBtn, "BackgroundColor3")
-
-local flingDropdownList = Instance.new("ScrollingFrame")
-flingDropdownList.Size = UDim2.new(0.5, -12, 0, 90)
-flingDropdownList.Position = UDim2.new(0, 10, 0, 66)
-flingDropdownList.BackgroundColor3 = THEME.HeaderBg
-flingDropdownList.BorderSizePixel = 0
-flingDropdownList.Visible = false
-flingDropdownList.ZIndex = 20
-flingDropdownList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-flingDropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
-flingDropdownList.ScrollBarThickness = 2
-flingDropdownList.Parent = flingContainer
-local fdlCorner = Instance.new("UICorner") fdlCorner.CornerRadius = UDim.new(0, 5) fdlCorner.Parent = flingDropdownList
-local fdlStroke = Instance.new("UIStroke") fdlStroke.Color = THEME.Border fdlStroke.Parent = flingDropdownList
-
-local fListLayout = Instance.new("UIListLayout") fListLayout.Parent = flingDropdownList
-
-flingDropdownBtn.MouseButton1Click:Connect(function()
-    flingDropdownList.Visible = not flingDropdownList.Visible
-    if flingDropdownList.Visible then
-        for _, child in ipairs(flingDropdownList:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer then
-                local pBtn = Instance.new("TextButton")
-                pBtn.Size = UDim2.new(1, 0, 0, 22)
-                pBtn.BackgroundTransparency = 1
-                pBtn.Text = p.DisplayName
-                pBtn.TextColor3 = THEME.Text
-                pBtn.TextSize = 10
-                pBtn.Font = THEME.FontRegular
-                pBtn.ZIndex = 21
-                pBtn.Parent = flingDropdownList
-                pBtn.MouseButton1Click:Connect(function()
-                    selectedFlingTarget = p
-                    flingDropdownBtn.Text = p.DisplayName
-                    flingDropdownList.Visible = false
-                end)
+local triggerbotEnabled = false
+createToggle(pageCombat, "Triggerbot", "⚡ Triggerbot (Automata tüzelés)", false, function(enabled) triggerbotEnabled = enabled end)
+table.insert(cleanupConnections, RunService.RenderStepped:Connect(function()
+    if triggerbotEnabled then
+        local mouseTarget = LocalPlayer:GetMouse().Target
+        if mouseTarget and mouseTarget.Parent and mouseTarget.Parent:FindFirstChildOfClass("Humanoid") then
+            local targetPlayer = Players:GetPlayerFromCharacter(mouseTarget.Parent)
+            if targetPlayer and targetPlayer ~= LocalPlayer then
+                VirtualUser:Button1Down(Vector2.new(0,0), Camera.CFrame)
+                task.wait(0.05)
+                VirtualUser:Button1Up(Vector2.new(0,0), Camera.CFrame)
             end
         end
     end
-end)
+end))
 
-executeFlingBtn.MouseButton1Click:Connect(function()
-    if flinging then
-        flinging = false
-        if flingConn then flingConn:Disconnect() flingConn = nil end
-        executeFlingBtn.Text = "🚀 Indítás"
-        notify("Fling", "Fling leállítva.", 2)
-        return
+local spinbotEnabled = false
+createToggle(pageCombat, "Spinbot", "🌀 Spinbot (Forgás)", false, function(enabled) spinbotEnabled = enabled end)
+table.insert(cleanupConnections, RunService.RenderStepped:Connect(function()
+    if spinbotEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local root = LocalPlayer.Character.HumanoidRootPart
+        root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(50), 0)
     end
+end))
 
-    if selectedFlingTarget and selectedFlingTarget.Character and selectedFlingTarget.Character:FindFirstChild("HumanoidRootPart") then
-        flinging = true
-        executeFlingBtn.Text = "🛑 Leállítás"
-        notify("Fling", "Fling aktív: " .. selectedFlingTarget.DisplayName, 3)
-
-        local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local angle = 0
-        flingConn = RunService.Heartbeat:Connect(function()
-            if not flinging or not myRoot or not selectedFlingTarget.Character or not selectedFlingTarget.Character:FindFirstChild("HumanoidRootPart") then
-                flinging = false
-                if flingConn then flingConn:Disconnect() end
-                executeFlingBtn.Text = "🚀 Indítás"
-                return
+local hitboxSize = 2
+createSlider(pageCombat, "HitboxSize", "📦 Hitbox Növelő méret", 2, 15, 2, function(val) hitboxSize = val end)
+createToggle(pageCombat, "HitboxExt", "📦 Hitbox Kiterjesztés", false, function(enabled)
+    table.insert(cleanupConnections, RunService.Heartbeat:Connect(function()
+        if enabled then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    p.Character.HumanoidRootPart.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
+                    p.Character.HumanoidRootPart.Transparency = 0.7
+                    p.Character.HumanoidRootPart.CanCollide = false
+                end
             end
-            local targetRoot = selectedFlingTarget.Character.HumanoidRootPart
-            angle = angle + 100
-            myRoot.Velocity = Vector3.new(10000, 10000, 10000)
-            myRoot.CFrame = targetRoot.CFrame * CFrame.Angles(0, math.rad(angle), 0) * CFrame.new(0, 0, 1.5)
-        end)
-        table.insert(cleanupConnections, flingConn)
-    else
-        notify("Fling Hiba", "Érvénytelen célpont!", 2)
-    end
+        end
+    end))
 end)
 
 createToggle(pageCombat, "Godmode", "🛡️ Godmode (Halhatatlanság)", false, function(enabled)
     local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if hum then
-        if enabled then
-            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-            notify("Godmode", "Godmode Aktiválva.", 2)
-        else
-            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
-            notify("Godmode", "Godmode Deaktiválva.", 2)
-        end
-    end
+    if hum then hum:SetStateEnabled(Enum.HumanoidStateType.Dead, not enabled) end
 end)
 
 createToggle(pageCombat, "Invisibility", "👻 Láthatatlanság", false, function(enabled)
     local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
+    if char then
         for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") or part:IsA("Decal") then
-                part.Transparency = enabled and 1 or 0
-            end
+            if part:IsA("BasePart") or part:IsA("Decal") then part.Transparency = enabled and 1 or 0 end
         end
-        notify("Láthatatlanság", enabled and "Most láthatatlan vagy!" or "Újra látható vagy.", 2)
     end
 end)
 
+-- ================= LÁTVÁNY FUNKCIÓK =================
 createSlider(pageVisuals, "FOV", "🔍 Látószög (FOV)", 60, 120, 70, function(val) Camera.FieldOfView = val end)
+
+createToggle(pageVisuals, "Fullbright", "☀️ Fullbright (Sötétség eltávolítása)", false, function(enabled)
+    Lighting.Brightness = enabled and 3 or 1
+    Lighting.ClockTime = enabled and 14 or 12
+    Lighting.GlobalShadows = not enabled
+end)
+
+local fovCircleEnabled = false
+local fovDrawing = Drawing.new("Circle")
+fovDrawing.Visible = false
+fovDrawing.Thickness = 1
+fovDrawing.Color = Color3.fromRGB(255, 255, 255)
+fovDrawing.Filled = false
+fovDrawing.Radius = 100
+
+createSlider(pageVisuals, "FOVCircleSize", "⭕ FOV Kör méret", 50, 300, 100, function(val) fovDrawing.Radius = val end)
+createToggle(pageVisuals, "FOVCircle", "⭕ FOV Kör Megjelenítés", false, function(enabled)
+    fovCircleEnabled = enabled
+    fovDrawing.Visible = enabled
+end)
+table.insert(cleanupConnections, RunService.RenderStepped:Connect(function()
+    if fovCircleEnabled then
+        fovDrawing.Position = UserInputService:GetMouseLocation()
+    end
+end))
 
 local espEnabled, espCache = false, {}
 local function removeEsp(player)
@@ -963,7 +795,6 @@ local function applyEsp(player)
 
         espCache[player] = { Highlight = highlight, Billboard = billboard }
     end
-
     if player.Character then setupCharacter(player.Character) end
     player.CharacterAdded:Connect(setupCharacter)
 end
@@ -977,8 +808,150 @@ createToggle(pageVisuals, "ESP", "👁️ Játékos ESP (Kiemelés)", false, fun
     end
 end)
 
-createButton(pageUtility, "🌀 Szerver Újracsatlakozás", function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end)
+-- ================= ANIMÁCIÓK =================
+local animationPacks = {
+    { Name = "🕺 Zombie Pack", Id = "rbxassetid://616158082" },
+    { Name = "🥷 Ninja Pack", Id = "rbxassetid://656117400" },
+    { Name = "🦸 Hero Pack", Id = "rbxassetid://616111295" },
+    { Name = "🤖 Robot Pack", Id = "rbxassetid://616088211" },
+    { Name = "💃 Dance Pack", Id = "rbxassetid://507771019" }
+}
 
+local currentTrack = nil
+local selectedAnimId = animationPacks[1].Id
+
+local animContainer = Instance.new("Frame")
+animContainer.Size = UDim2.new(1, 0, 0, 75)
+animContainer.BackgroundColor3 = THEME.ContainerBg
+animContainer.BorderSizePixel = 0
+animContainer.Parent = pageAnim
+local acCorner = Instance.new("UICorner") acCorner.CornerRadius = UDim.new(0, 6) acCorner.Parent = animContainer
+
+local animLabel = Instance.new("TextLabel")
+animLabel.Size = UDim2.new(1, -20, 0, 18)
+animLabel.Position = UDim2.new(0, 10, 0, 4)
+animLabel.BackgroundTransparency = 1
+animLabel.Text = "🎭 Animáció Csomagok"
+animLabel.TextColor3 = THEME.Text
+animLabel.TextSize = 11
+animLabel.Font = THEME.FontRegular
+animLabel.TextXAlignment = Enum.TextXAlignment.Left
+animLabel.Parent = animContainer
+
+local animDropdownBtn = Instance.new("TextButton")
+animDropdownBtn.Size = UDim2.new(0.5, -12, 0, 26)
+animDropdownBtn.Position = UDim2.new(0, 10, 0, 38)
+animDropdownBtn.BackgroundColor3 = THEME.AccentInactive
+animDropdownBtn.BorderSizePixel = 0
+animDropdownBtn.Text = animationPacks[1].Name
+animDropdownBtn.TextColor3 = THEME.Text
+animDropdownBtn.TextSize = 10
+animDropdownBtn.Font = THEME.FontRegular
+animDropdownBtn.Parent = animContainer
+local adbCorner = Instance.new("UICorner") adbCorner.CornerRadius = UDim.new(0, 5) adbCorner.Parent = animDropdownBtn
+
+local toggleAnimBtn = Instance.new("TextButton")
+toggleAnimBtn.Size = UDim2.new(0.5, -12, 0, 26)
+toggleAnimBtn.Position = UDim2.new(0.5, 4, 0, 38)
+toggleAnimBtn.BackgroundColor3 = THEME.Accent
+toggleAnimBtn.BorderSizePixel = 0
+toggleAnimBtn.Text = "▶ Indítás"
+toggleAnimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleAnimBtn.TextSize = 10
+toggleAnimBtn.Font = THEME.FontBold
+toggleAnimBtn.Parent = animContainer
+local tabCorner = Instance.new("UICorner") tabCorner.CornerRadius = UDim.new(0, 5) tabCorner.Parent = toggleAnimBtn
+registerAccent(toggleAnimBtn, "BackgroundColor3")
+
+local animDropdownList = Instance.new("ScrollingFrame")
+animDropdownList.Size = UDim2.new(0.5, -12, 0, 100)
+animDropdownList.Position = UDim2.new(0, 10, 0, 66)
+animDropdownList.BackgroundColor3 = THEME.HeaderBg
+animDropdownList.BorderSizePixel = 0
+animDropdownList.Visible = false
+animDropdownList.ZIndex = 20
+animDropdownList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+animDropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
+animDropdownList.ScrollBarThickness = 2
+animDropdownList.Parent = animContainer
+local adlCorner = Instance.new("UICorner") adlCorner.CornerRadius = UDim.new(0, 5) adlCorner.Parent = animDropdownList
+local adlStroke = Instance.new("UIStroke") adlStroke.Color = THEME.Border adlStroke.Parent = animDropdownList
+local animListLayout = Instance.new("UIListLayout") animListLayout.Parent = animDropdownList
+
+animDropdownBtn.MouseButton1Click:Connect(function()
+    animDropdownList.Visible = not animDropdownList.Visible
+    if animDropdownList.Visible then
+        for _, child in ipairs(animDropdownList:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+        for _, pack in ipairs(animationPacks) do
+            local pBtn = Instance.new("TextButton")
+            pBtn.Size = UDim2.new(1, 0, 0, 24)
+            pBtn.BackgroundTransparency = 1
+            pBtn.Text = pack.Name
+            pBtn.TextColor3 = THEME.Text
+            pBtn.TextSize = 10
+            pBtn.Font = THEME.FontRegular
+            pBtn.ZIndex = 21
+            pBtn.Parent = animDropdownList
+            pBtn.MouseButton1Click:Connect(function()
+                selectedAnimId = pack.Id
+                animDropdownBtn.Text = pack.Name
+                animDropdownList.Visible = false
+                if currentTrack then currentTrack:Stop() currentTrack = nil toggleAnimBtn.Text = "▶ Indítás" end
+            end)
+        end
+    end
+end)
+
+toggleAnimBtn.MouseButton1Click:Connect(function()
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    if currentTrack then
+        currentTrack:Stop()
+        currentTrack = nil
+        toggleAnimBtn.Text = "▶ Indítás"
+    else
+        local anim = Instance.new("Animation")
+        anim.AnimationId = selectedAnimId
+        currentTrack = hum:LoadAnimation(anim)
+        currentTrack:Play()
+        toggleAnimBtn.Text = "⏹ Leállítás"
+    end
+end)
+
+-- ================= ESZKÖZÖK (UTILITY) =================
+createToggle(pageUtility, "AntiAFK", "🛡️ Anti-AFK (Kitiltás gátló)", true, function(enabled)
+    if enabled then
+        table.insert(cleanupConnections, LocalPlayer.Idled:Connect(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end))
+        notify("Anti-AFK", "Aktiválva.", 2)
+    end
+end)
+
+local autoclickerEnabled = false
+createToggle(pageUtility, "AutoClicker", "🖱️ Auto Clicker (Gyors kattintó)", false, function(enabled) autoclickerEnabled = enabled end)
+table.insert(cleanupConnections, RunService.RenderStepped:Connect(function()
+    if autoclickerEnabled then
+        VirtualUser:Button1Down(Vector2.new(0,0), Camera.CFrame)
+        task.wait(0.05)
+        VirtualUser:Button1Up(Vector2.new(0,0), Camera.CFrame)
+    end
+end))
+
+createButton(pageUtility, "🔄 Szerver Újracsatlakozás", function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end)
+createButton(pageUtility, "🔀 Server Hop (Másik szerver)", function()
+    local Servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"))
+    for _, s in ipairs(Servers.data) do
+        if s.playing < s.maxPlayers and s.id ~= game.JobId then
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
+            break
+        end
+    end
+end)
+
+-- ================= BEÁLLÍTÁSOK =================
 createButton(pageSettings, "🎨 Kék Téma", function() setAccentColor(Color3.fromRGB(90, 160, 255)) end)
 createButton(pageSettings, "🎨 Piros Téma", function() setAccentColor(Color3.fromRGB(255, 80, 80)) end)
 createButton(pageSettings, "🎨 Zöld Téma", function() setAccentColor(Color3.fromRGB(80, 220, 120)) end)
