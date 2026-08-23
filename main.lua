@@ -327,8 +327,9 @@ footer.TextSize = 10
 footer.Font = THEME.FontRegular
 footer.Parent = panel
 
--- Forward declare animation functions
-local applyAnimationPack
+-- ========== FORWARD DECLARATION (MOVED UP) ==========
+local applyAnimationPack  -- will be defined later
+-- ==================================================
 
 -- ========== UNLOCK ==========
 local isUnlocked = false
@@ -338,7 +339,7 @@ local function unlockSuite()
     panel.Visible = true
     notify("Sikeres Belépés", "Minden modul aktív.", 3)
     task.wait(0.5)
-    applyAnimationPack()
+    applyAnimationPack()  -- now safe because applyAnimationPack is defined before unlock call
 end
 
 submitKeyBtn.MouseButton1Click:Connect(function()
@@ -663,13 +664,8 @@ local function applyAllSettings()
     end)
 end
 
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.5)
-    applyAllSettings()
-    applyAnimationPack()
-end)
-
 -- ========== ANIMATION PACK SYSTEM (BUNDLE & NATIVE OVERRIDE) ==========
+-- *** MOVED DEFINITION UP BEFORE ANY USAGE ***
 applyAnimationPack = function()
     local char = getChar()
     if not char then return end
@@ -699,6 +695,18 @@ applyAnimationPack = function()
                         end
                     end)
                 end
+            else
+                -- fallback: if AssetService fails, try using the BundleID directly (if it's an asset ID)
+                pcall(function()
+                    -- attempt to treat BundleID as a single animation ID (some users may enter an ID)
+                    local testId = tonumber(Config.BundleID)
+                    if testId then
+                        idleId = tostring(testId)
+                        walkId = tostring(testId)
+                        runId = tostring(testId)
+                        jumpId = tostring(testId)
+                    end
+                end)
             end
         end
     end
@@ -742,6 +750,13 @@ applyAnimationPack = function()
         end
     end)
 end
+
+-- CharacterAdded now uses the defined function
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    applyAllSettings()
+    applyAnimationPack()
+end)
 
 -- ===== MOZGÁS =====
 createSlider(pageMovement, "WalkSpeed", "⚡ Járási Sebesség", 16, 200, 16, function(val)
@@ -831,6 +846,9 @@ RunService.Heartbeat:Connect(function()
         if not flyBodyVelocity or flyBodyVelocity.Parent ~= root then
             setupFly()
         end
+        -- Added nil check before accessing flyBodyVelocity
+        if not flyBodyVelocity then return end
+        
         local moveDir = Vector3.new()
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector * Vector3.new(1,0,1) end
         if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector * Vector3.new(1,0,1) end
@@ -849,17 +867,33 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+-- ===== TP TOOL – FIXED to avoid multiple connections =====
+local tpToolActive = false
+local tpConnection = nil
+
 createButton(pageMovement, "📍 TP Tool (Ctrl + Kattintás)", function()
-    local mouse = LocalPlayer:GetMouse()
-    mouse.Button1Down:Connect(function()
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) and LocalPlayer.Character then
-            local root = getRoot()
-            if root then
-                root.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
-            end
+    -- Toggle the tool on/off
+    tpToolActive = not tpToolActive
+    if tpToolActive then
+        if not tpConnection then
+            local mouse = LocalPlayer:GetMouse()
+            tpConnection = mouse.Button1Down:Connect(function()
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) and LocalPlayer.Character then
+                    local root = getRoot()
+                    if root then
+                        root.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
+                    end
+                end
+            end)
         end
-    end)
-    notify("TP Tool", "Aktív: Ctrl + Bal klikk a pályán.", 3)
+        notify("TP Tool", "Aktív: Ctrl + Bal klikk a pályán.", 3)
+    else
+        if tpConnection then
+            tpConnection:Disconnect()
+            tpConnection = nil
+        end
+        notify("TP Tool", "Kikapcsolva.", 2)
+    end
 end)
 
 -- ===== HARC =====
