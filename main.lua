@@ -1,6 +1,8 @@
 --[[
-    Fabalta Tool v10.0 – Max Edition (Enhanced)
-    Improved by AI Assistant
+    Fabalta Tool v10.1 – Max Edition
+    – Fixed major bugs
+    – Added Animation Pack Changer
+    – Key loaded ONLY from key.txt
 ]]
 
 local Players = game:GetService("Players")
@@ -35,6 +37,12 @@ local Config = {
     Fly = false,
     ESP = false,
     SilentAim = false,
+    -- Animation settings
+    AnimPack = "Default",  -- Default, Ninja, Robot, Cartoon, Custom
+    AnimIdle = "",
+    AnimWalk = "",
+    AnimRun = "",
+    AnimJump = "",
 }
 
 local function loadConfig()
@@ -53,14 +61,23 @@ local function saveConfig()
 end
 loadConfig()
 
--- ========== KEY VALIDATION ==========
-local CORRECT_KEY = "7YLhpY0bzXe9AyO5obJa2AOPhFmeIsMQ8sEG8XgE9SEbRJIW2grBBqeCTSb5viIi9d"  -- fallback
--- Optionally load from file:
+-- ========== KEY VALIDATION – ONLY FROM key.txt ==========
+local CORRECT_KEY = ""
+local keyMissing = false
 if isfile and isfile("key.txt") then
     pcall(function()
         local loadedKey = readfile("key.txt"):gsub("%s+", "")
-        if loadedKey ~= "" then CORRECT_KEY = loadedKey end
+        if loadedKey ~= "" then
+            CORRECT_KEY = loadedKey
+        else
+            keyMissing = true
+        end
     end)
+else
+    keyMissing = true
+end
+if keyMissing then
+    warn("key.txt not found or empty – unlock will be impossible.")
 end
 
 -- ========== THEME ==========
@@ -101,7 +118,6 @@ screenGui.Name = "FabaltaToolMax"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = PlayerGui
 
--- Notification container
 local notifContainer = Instance.new("Frame")
 notifContainer.Size = UDim2.new(0, 240, 1, -20)
 notifContainer.Position = UDim2.new(1, -250, 0, 10)
@@ -201,10 +217,10 @@ keyInput.Size = UDim2.new(0.88, 0, 0, 36)
 keyInput.Position = UDim2.new(0.06, 0, 0.35, 0)
 keyInput.BackgroundColor3 = THEME.ContainerBg
 keyInput.BorderSizePixel = 0
-keyInput.PlaceholderText = "Illeszd be a kulcsot..."
+keyInput.PlaceholderText = keyMissing and "⚠️ key.txt HIÁNYZIK" or "Illeszd be a kulcsot..."
 keyInput.Text = ""
 keyInput.TextColor3 = THEME.Text
-keyInput.PlaceholderColor3 = THEME.TextSub
+keyInput.PlaceholderColor3 = keyMissing and Color3.fromRGB(255, 100, 100) or THEME.TextSub
 keyInput.TextSize = 11
 keyInput.Font = THEME.FontRegular
 keyInput.Parent = keyFrame
@@ -228,7 +244,7 @@ makeDraggable(keyTitle, keyFrame)
 -- ========== MAIN PANEL ==========
 local panel = Instance.new("Frame")
 panel.Name = "MainPanel"
-panel.Size = UDim2.new(0, 580, 0, 420)  -- slightly wider
+panel.Size = UDim2.new(0, 580, 0, 460)  -- taller for animations
 panel.Position = UDim2.new(0.1, 0, 0.15, 0)
 panel.BackgroundColor3 = THEME.Background
 panel.BorderSizePixel = 0
@@ -239,7 +255,6 @@ panel.Parent = screenGui
 local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 10) corner.Parent = panel
 local border = Instance.new("UIStroke") border.Thickness = 1 border.Color = THEME.Border border.Parent = panel
 
--- Header
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, 0, 0, 38)
 header.BackgroundColor3 = THEME.HeaderBg
@@ -250,7 +265,7 @@ local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -60, 1, 0)
 titleLabel.Position = UDim2.new(0, 15, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "⚙️ Fabalta Tool v10.0 (Max Edition)"
+titleLabel.Text = "⚙️ Fabalta Tool v10.1 (Max Edition)"
 titleLabel.TextColor3 = THEME.Text
 titleLabel.TextSize = 13
 titleLabel.Font = THEME.FontBold
@@ -271,7 +286,6 @@ local cCorner = Instance.new("UICorner") cCorner.CornerRadius = UDim.new(0, 5) c
 
 makeDraggable(header, panel)
 
--- Sidebar
 local sidebar = Instance.new("ScrollingFrame")
 sidebar.Size = UDim2.new(0, 140, 1, -68)
 sidebar.Position = UDim2.new(0, 0, 0, 38)
@@ -294,7 +308,6 @@ sidebarPadding.PaddingLeft = UDim.new(0, 8)
 sidebarPadding.PaddingRight = UDim.new(0, 8)
 sidebarPadding.Parent = sidebar
 
--- Content
 local contentArea = Instance.new("Frame")
 contentArea.Size = UDim2.new(1, -150, 1, -48)
 contentArea.Position = UDim2.new(0, 145, 0, 43)
@@ -320,6 +333,9 @@ local function unlockSuite()
     keyFrame:Destroy()
     panel.Visible = true
     notify("Sikeres Belépés", "Minden modul aktív.", 3)
+    -- Load animations after unlock
+    task.wait(0.5)
+    applyAnimationPack()
 end
 
 submitKeyBtn.MouseButton1Click:Connect(function()
@@ -331,7 +347,6 @@ submitKeyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Toggle panel visibility
 local isVisible = true
 UserInputService.InputBegan:Connect(function(input, processed)
     if not processed and isUnlocked and input.KeyCode == Enum.KeyCode[Config.ToggleKey] then
@@ -404,7 +419,6 @@ local function createTab(name)
     return scroll
 end
 
--- Animated toggle
 local function createToggle(parentPage, configKey, labelText, defaultOn, callback)
     local savedState = Config[configKey]
     if savedState == nil then savedState = defaultOn end
@@ -452,7 +466,6 @@ local function createToggle(parentPage, configKey, labelText, defaultOn, callbac
         state = newState
         Config[configKey] = state
         saveConfig()
-        -- Animate
         local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         local targetColor = state and THEME.Accent or THEME.AccentInactive
         local targetPos = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
@@ -465,7 +478,6 @@ local function createToggle(parentPage, configKey, labelText, defaultOn, callbac
     if savedState then task.spawn(function() pcall(function() callback(true) end) end) end
 end
 
--- Slider with value label
 local function createSlider(parentPage, configKey, labelText, minVal, maxVal, defaultVal, callback)
     local savedValue = Config[configKey] or defaultVal
 
@@ -562,16 +574,56 @@ local function createButton(parentPage, text, callback)
     btn.MouseButton1Click:Connect(function() task.spawn(callback) end)
 end
 
+local function createTextBox(parentPage, configKey, labelText, placeholder, callback)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 0, 48)
+    container.BackgroundColor3 = THEME.ContainerBg
+    container.BorderSizePixel = 0
+    container.Parent = parentPage
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 6) c.Parent = container
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.4, 0, 0, 20)
+    label.Position = UDim2.new(0, 10, 0, 4)
+    label.BackgroundTransparency = 1
+    label.Text = labelText
+    label.TextColor3 = THEME.Text
+    label.TextSize = 11
+    label.Font = THEME.FontBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = container
+
+    local box = Instance.new("TextBox")
+    box.Size = UDim2.new(0.5, -20, 0, 28)
+    box.Position = UDim2.new(0.45, 0, 0, 12)
+    box.BackgroundColor3 = THEME.Background
+    box.BorderSizePixel = 0
+    box.Text = Config[configKey] or ""
+    box.PlaceholderText = placeholder
+    box.TextColor3 = THEME.Text
+    box.PlaceholderColor3 = THEME.TextSub
+    box.TextSize = 11
+    box.Font = THEME.FontRegular
+    box.Parent = container
+    local boxCorner = Instance.new("UICorner") boxCorner.CornerRadius = UDim.new(0, 4) boxCorner.Parent = box
+
+    box:GetPropertyChangedSignal("Text"):Connect(function()
+        Config[configKey] = box.Text
+        saveConfig()
+        pcall(callback)
+    end)
+end
+
 -- ========== TABS ==========
 local pageMovement = createTab("Mozgás")
 local pageCombat = createTab("Harc")
 local pageVisuals = createTab("Látvány")
 local pageUtility = createTab("Eszközök")
+local pageAnim = createTab("Animációk")
 local pageSettings = createTab("Beállítások")
 
 -- ========== FEATURES ==========
 
--- Helpers for character access
 local function getChar()
     return LocalPlayer.Character
 end
@@ -586,29 +638,117 @@ local function getRoot()
     return char and char:FindFirstChild("HumanoidRootPart")
 end
 
--- Apply settings on respawn
 local function applyAllSettings()
     local hum = getHumanoid()
     if hum then
-        hum.WalkSpeed = Config.WalkSpeed
-        hum.JumpPower = Config.JumpPower
-        hum.UseJumpPower = true
-        if Config.Godmode then
-            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-        else
-            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
-        end
+        pcall(function()
+            hum.WalkSpeed = Config.WalkSpeed
+            hum.JumpPower = Config.JumpPower
+            hum.UseJumpPower = true
+            if Config.Godmode then
+                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+            else
+                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+            end
+        end)
     end
-    Camera.FieldOfView = Config.FOV
-    Lighting.Brightness = Config.Fullbright and 3 or 1
-    Lighting.ClockTime = Config.Fullbright and 14 or 12
-    Lighting.GlobalShadows = not Config.Fullbright
+    pcall(function()
+        Camera.FieldOfView = Config.FOV
+        Lighting.Brightness = Config.Fullbright and 3 or 1
+        Lighting.ClockTime = Config.Fullbright and 14 or 12
+        Lighting.GlobalShadows = not Config.Fullbright
+    end)
 end
 
 LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.5) -- wait for humanoid to load
+    task.wait(0.5)
     applyAllSettings()
+    applyAnimationPack()
 end)
+
+-- ========== ANIMATION PACK SYSTEM ==========
+local currentAnimations = {} -- tracks loaded AnimationTrack objects
+
+local function stopAllAnimations(animator)
+    if not animator then return end
+    for _, track in pairs(currentAnimations) do
+        pcall(function() track:Stop() end)
+    end
+    currentAnimations = {}
+    -- also stop all other animations
+    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+        pcall(function() track:Stop() end)
+    end
+end
+
+local function loadAnimation(animator, animId)
+    if not animator or animId == "" then return nil end
+    local success, anim = pcall(function()
+        return Instance.new("Animation")
+    end)
+    if not success then return nil end
+    anim.AnimationId = "rbxassetid://" .. animId:gsub("%D+", "")
+    local track
+    pcall(function()
+        track = animator:LoadAnimation(anim)
+    end)
+    return track
+end
+
+local function applyAnimationPack()
+    local hum = getHumanoid()
+    if not hum then return end
+    local animator = hum:FindFirstChildOfClass("Animator")
+    if not animator then
+        animator = Instance.new("Animator")
+        animator.Parent = hum
+    end
+
+    stopAllAnimations(animator)
+
+    local pack = Config.AnimPack
+    local idleId, walkId, runId, jumpId
+
+    if pack == "Default" then
+        -- Leave empty to use default game animations
+    elseif pack == "Ninja" then
+        idleId = "12114635098"  -- example, replace with actual
+        walkId = "12114635100"
+        runId = "12114635102"
+        jumpId = "12114635104"
+    elseif pack == "Robot" then
+        idleId = "6150272929"
+        walkId = "6150272946"
+        runId = "6150272961"
+        jumpId = "6150272980"
+    elseif pack == "Cartoon" then
+        idleId = "5077696589"
+        walkId = "5077696597"
+        runId = "5077696603"
+        jumpId = "5077696609"
+    elseif pack == "Custom" then
+        idleId = Config.AnimIdle
+        walkId = Config.AnimWalk
+        runId = Config.AnimRun
+        jumpId = Config.AnimJump
+    end
+
+    local function tryLoad(id, priority)
+        if id and id ~= "" then
+            local track = loadAnimation(animator, id)
+            if track then
+                track.Priority = priority or Enum.AnimationPriority.Idle
+                pcall(function() track:Play() end)
+                currentAnimations[#currentAnimations+1] = track
+            end
+        end
+    end
+
+    tryLoad(idleId, Enum.AnimationPriority.Idle)
+    tryLoad(walkId, Enum.AnimationPriority.Movement)
+    tryLoad(runId, Enum.AnimationPriority.Movement)
+    tryLoad(jumpId, Enum.AnimationPriority.Action)
+end
 
 -- ===== MOZGÁS =====
 createSlider(pageMovement, "WalkSpeed", "⚡ Járási Sebesség", 16, 200, 16, function(val)
@@ -636,49 +776,54 @@ end)
 
 createToggle(pageMovement, "Noclip", "🧱 Noclip (Falon átjárás)", false, function(enabled)
     Config.Noclip = enabled
+    -- if disabled, reset collision on all parts
+    if not enabled and LocalPlayer.Character then
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide == false then
+                part.CanCollide = true
+            end
+        end
+    end
 end)
 
 RunService.Heartbeat:Connect(function()
     if Config.Noclip and LocalPlayer.Character then
         for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
+            if part:IsA("BasePart") and not part.Anchored then
                 part.CanCollide = false
             end
         end
     end
 end)
 
+-- Fly mode with BodyVelocity
+local flyBodyVelocity = nil
+local function setupFly()
+    local root = getRoot()
+    if not root then return end
+    if not flyBodyVelocity then
+        flyBodyVelocity = Instance.new("BodyVelocity")
+        flyBodyVelocity.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+        flyBodyVelocity.P = 1e5
+        flyBodyVelocity.Parent = root
+    end
+end
+
+local function removeFly()
+    if flyBodyVelocity then
+        flyBodyVelocity:Destroy()
+        flyBodyVelocity = nil
+    end
+end
+
 createToggle(pageMovement, "Fly", "✈️ Repülés (Szóköz/SHIFT)", false, function(enabled)
     Config.Fly = enabled
-    if not enabled then
+    if enabled then
+        setupFly()
+    else
+        removeFly()
         local hum = getHumanoid()
         if hum then
-            hum.PlatformStand = false
-            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
-        end
-    end
-end)
-
--- Fly logic
-local flyConnection
-UserInputService.InputBegan:Connect(function(input)
-    if Config.Fly then
-        local hum = getHumanoid()
-        if not hum then return end
-        if input.KeyCode == Enum.KeyCode.Space then
-            hum.PlatformStand = true
-            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-        elseif input.KeyCode == Enum.KeyCode.LeftShift then
-            hum.PlatformStand = true
-            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-        end
-    end
-end)
-UserInputService.InputEnded:Connect(function(input)
-    if Config.Fly then
-        local hum = getHumanoid()
-        if not hum then return end
-        if input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.LeftShift then
             hum.PlatformStand = false
             hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
         end
@@ -688,22 +833,28 @@ end)
 RunService.Heartbeat:Connect(function()
     if Config.Fly and LocalPlayer.Character then
         local root = getRoot()
-        local hum = getHumanoid()
-        if root and hum then
-            local moveDir = Vector3.new()
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector * Vector3.new(1,0,1) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector * Vector3.new(1,0,1) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0,1,0) end
-            if moveDir.Magnitude > 0 then
-                moveDir = moveDir.Unit * 50
-                root.Velocity = Vector3.new(moveDir.X, root.Velocity.Y + (moveDir.Y - root.Velocity.Y) * 0.1, moveDir.Z)
-            else
-                root.Velocity = Vector3.new(0, root.Velocity.Y, 0)
-            end
+        if not root then
+            removeFly()
+            return
         end
+        if not flyBodyVelocity or flyBodyVelocity.Parent ~= root then
+            setupFly()
+        end
+        local moveDir = Vector3.new()
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector * Vector3.new(1,0,1) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector * Vector3.new(1,0,1) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0,1,0) end
+        if moveDir.Magnitude > 0 then
+            moveDir = moveDir.Unit * 60
+            flyBodyVelocity.Velocity = moveDir
+        else
+            flyBodyVelocity.Velocity = Vector3.new(0,0,0)
+        end
+    elseif not Config.Fly and flyBodyVelocity then
+        removeFly()
     end
 end)
 
@@ -753,7 +904,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Silent Aim (optional)
 createToggle(pageCombat, "SilentAim", "🎯 Silent Aimbot (Auto-lock)", false, function(enabled)
     Config.SilentAim = enabled
 end)
@@ -761,8 +911,6 @@ end)
 RunService.Heartbeat:Connect(function()
     if Config.SilentAim then
         local closestPlayer, closestDist = nil, math.huge
-        local char = LocalPlayer.Character
-        if not char then return end
         local root = getRoot()
         if not root then return end
         for _, p in ipairs(Players:GetPlayers()) do
@@ -801,12 +949,19 @@ createToggle(pageVisuals, "Fullbright", "☀️ Fullbright (Sötétség ellen)",
     Lighting.GlobalShadows = not enabled
 end)
 
--- ESP (simple box)
-createToggle(pageVisuals, "ESP", "👁️ ESP (Ládák/játékosok)", false, function(enabled)
+createToggle(pageVisuals, "ESP", "👁️ ESP (Játékosok)", false, function(enabled)
     Config.ESP = enabled
+    if not enabled then
+        -- remove all ESP guis
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player.Character then
+                local esp = player.Character:FindFirstChild("ESP_Gui")
+                if esp then esp:Destroy() end
+            end
+        end
+    end
 end)
 
-local espConnections = {}
 RunService.RenderStepped:Connect(function()
     if Config.ESP then
         for _, player in ipairs(Players:GetPlayers()) do
@@ -814,12 +969,11 @@ RunService.RenderStepped:Connect(function()
                 local head = player.Character.Head
                 local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
                 if onScreen then
-                    -- create a simple billboard GUI if not exists
                     local espGui = head:FindFirstChild("ESP_Gui")
                     if not espGui then
                         espGui = Instance.new("BillboardGui")
                         espGui.Name = "ESP_Gui"
-                        espGui.Size = UDim2.new(0, 40, 0, 20)
+                        espGui.Size = UDim2.new(0, 60, 0, 20)
                         espGui.AlwaysOnTop = true
                         espGui.Parent = head
 
@@ -838,27 +992,41 @@ RunService.RenderStepped:Connect(function()
                 end
             end
         end
-    else
-        -- remove all ESP guis
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player.Character then
-                local esp = player.Character:FindFirstChild("ESP_Gui")
-                if esp then esp:Destroy() end
-            end
-        end
+    end
+end)
+
+-- Player removal cleanup
+Players.PlayerRemoving:Connect(function(player)
+    if player.Character then
+        local esp = player.Character:FindFirstChild("ESP_Gui")
+        if esp then esp:Destroy() end
     end
 end)
 
 -- ===== ESZKÖZÖK =====
+local antiAfkConnection
 createToggle(pageUtility, "AntiAFK", "🛡️ Anti-AFK (Kitiltás ellen)", true, function(enabled)
     Config.AntiAFK = enabled
+    if antiAfkConnection then antiAfkConnection:Disconnect() antiAfkConnection = nil end
     if enabled then
-        LocalPlayer.Idled:Connect(function()
-            VirtualUser:CaptureController()
-            VirtualUser:ClickButton2(Vector2.new())
+        antiAfkConnection = LocalPlayer.Idled:Connect(function()
+            pcall(function()
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new())
+            end)
         end)
     end
 end)
+
+-- Trigger initial anti-afk if enabled
+if Config.AntiAFK then
+    antiAfkConnection = LocalPlayer.Idled:Connect(function()
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+    end)
+end
 
 createButton(pageUtility, "🔄 Szerver Újracsatlakozás", function()
     TeleportService:Teleport(game.PlaceId, LocalPlayer)
@@ -866,12 +1034,66 @@ end)
 
 createButton(pageUtility, "📋 Másolás (Clipboard)", function()
     if setclipboard then
-        setclipboard("Fabalta v10.0 – engedélyezve!")
+        setclipboard("Fabalta v10.1 – engedélyezve!")
         notify("Másolva", "Szöveg a vágólapra került.", 2)
     else
         notify("Hiba", "setclipboard nem támogatott.", 2)
     end
 end)
+
+-- ===== ANIMÁCIÓK =====
+local animPackButtons = {}
+local function createAnimPackButton(parent, packName)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 28)
+    btn.BackgroundColor3 = (Config.AnimPack == packName) and THEME.Accent or THEME.ContainerBg
+    btn.BorderSizePixel = 0
+    btn.Text = packName
+    btn.TextColor3 = (Config.AnimPack == packName) and Color3.fromRGB(255,255,255) or THEME.Text
+    btn.TextSize = 11
+    btn.Font = THEME.FontBold
+    btn.Parent = parent
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 4) c.Parent = btn
+    btn.MouseButton1Click:Connect(function()
+        Config.AnimPack = packName
+        saveConfig()
+        -- update button styles
+        for name, b in pairs(animPackButtons) do
+            b.BackgroundColor3 = (name == packName) and THEME.Accent or THEME.ContainerBg
+            b.TextColor3 = (name == packName) and Color3.fromRGB(255,255,255) or THEME.Text
+        end
+        applyAnimationPack()
+        notify("Animáció", packName .. " csomag betöltve.", 2)
+    end)
+    return btn
+end
+
+-- Create pack selection area
+local animContainer = pageAnim
+-- Preset buttons
+local packNames = {"Default", "Ninja", "Robot", "Cartoon", "Custom"}
+for _, name in ipairs(packNames) do
+    local btn = createAnimPackButton(animContainer, name)
+    animPackButtons[name] = btn
+end
+
+-- Custom animation ID inputs (only visible/editable when Custom is selected)
+createTextBox(animContainer, "AnimIdle", "Idle ID", "pl.: 1234567890", function()
+    if Config.AnimPack == "Custom" then applyAnimationPack() end
+end)
+createTextBox(animContainer, "AnimWalk", "Walk ID", "pl.: 1234567890", function()
+    if Config.AnimPack == "Custom" then applyAnimationPack() end
+end)
+createTextBox(animContainer, "AnimRun", "Run ID", "pl.: 1234567890", function()
+    if Config.AnimPack == "Custom" then applyAnimationPack() end
+end)
+createTextBox(animContainer, "AnimJump", "Jump ID", "pl.: 1234567890", function()
+    if Config.AnimPack == "Custom" then applyAnimationPack() end
+end)
+
+-- Apply current pack on load
+task.wait(0.5)
+if isUnlocked then applyAnimationPack() end
 
 -- ===== BEÁLLÍTÁSOK =====
 createButton(pageSettings, "🎨 Kék Téma", function() setAccentColor(Color3.fromRGB(90, 160, 255)) end)
@@ -879,20 +1101,26 @@ createButton(pageSettings, "🎨 Piros Téma", function() setAccentColor(Color3.
 createButton(pageSettings, "🎨 Zöld Téma", function() setAccentColor(Color3.fromRGB(80, 220, 120)) end)
 createButton(pageSettings, "🎨 Lila Téma", function() setAccentColor(Color3.fromRGB(180, 100, 255)) end)
 createButton(pageSettings, "🔁 Minden visszaállítása", function()
-    -- reset config to defaults
     for k, v in pairs({
         WalkSpeed=16, JumpPower=50, InfJump=false, Noclip=false,
         Aimbot=false, AimSmooth=2, Godmode=false, FOV=70,
-        Fullbright=false, AntiAFK=true, Fly=false, ESP=false, SilentAim=false
+        Fullbright=false, AntiAFK=true, Fly=false, ESP=false, SilentAim=false,
+        AnimPack="Default", AnimIdle="", AnimWalk="", AnimRun="", AnimJump=""
     }) do
         Config[k] = v
     end
     saveConfig()
     applyAllSettings()
+    applyAnimationPack()
+    -- update UI button states
+    for name, btn in pairs(animPackButtons) do
+        btn.BackgroundColor3 = (name == "Default") and THEME.Accent or THEME.ContainerBg
+        btn.TextColor3 = (name == "Default") and Color3.fromRGB(255,255,255) or THEME.Text
+    end
     notify("Alaphelyzet", "Minden beállítás visszaállítva.", 3)
 end)
 
 -- Apply initial settings
 applyAllSettings()
 
-notify("Fabalta v10.0", "Fejlesztett verzió betöltve!", 3)
+notify("Fabalta v10.1", "Fejlesztett verzió + animációk betöltve!", 3)
