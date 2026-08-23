@@ -328,7 +328,7 @@ footer.Font = THEME.FontRegular
 footer.Parent = panel
 
 -- ========== FORWARD DECLARATION (MOVED UP) ==========
-local applyAnimationPack  -- will be defined later
+local applyAnimationPack  -- defined later
 -- ==================================================
 
 -- ========== UNLOCK ==========
@@ -339,7 +339,7 @@ local function unlockSuite()
     panel.Visible = true
     notify("Sikeres Belépés", "Minden modul aktív.", 3)
     task.wait(0.5)
-    applyAnimationPack()  -- now safe because applyAnimationPack is defined before unlock call
+    applyAnimationPack()  -- now safe
 end
 
 submitKeyBtn.MouseButton1Click:Connect(function()
@@ -664,8 +664,7 @@ local function applyAllSettings()
     end)
 end
 
--- ========== ANIMATION PACK SYSTEM (BUNDLE & NATIVE OVERRIDE) ==========
--- *** MOVED DEFINITION UP BEFORE ANY USAGE ***
+-- ========== ANIMATION PACK SYSTEM (SAFE VERSION) ==========
 applyAnimationPack = function()
     local char = getChar()
     if not char then return end
@@ -675,42 +674,47 @@ applyAnimationPack = function()
     local pack = Config.AnimPack
     local idleId, walkId, runId, jumpId
 
+    -- Safe parsing of BundleID
     if Config.BundleID and Config.BundleID ~= "" then
-        local bundleNum = tonumber(Config.BundleID:gsub("%D+", ""))
-        if bundleNum then
-            local success, assetIds = pcall(function()
-                return AssetService:GetAssetIdsForPackage(bundleNum)
+        local cleaned = Config.BundleID:gsub("%D+", "")
+        if cleaned ~= "" then
+            local bundleNum = nil
+            pcall(function()
+                bundleNum = tonumber(cleaned)  -- only one argument
             end)
-            if success and assetIds then
-                for _, id in ipairs(assetIds) do
-                    pcall(function()
-                        local info = game:GetService("MarketplaceService"):GetProductInfo(id)
-                        if info and info.AssetTypeId == 24 then
-                            local nameLower = string.lower(info.Name)
-                            if string.find(nameLower, "idle") then idleId = tostring(id)
-                            elseif string.find(nameLower, "walk") then walkId = tostring(id)
-                            elseif string.find(nameLower, "run") then runId = tostring(id)
-                            elseif string.find(nameLower, "jump") then jumpId = tostring(id)
-                            end
-                        end
-                    end)
-                end
-            else
-                -- fallback: if AssetService fails, try using the BundleID directly (if it's an asset ID)
-                pcall(function()
-                    -- attempt to treat BundleID as a single animation ID (some users may enter an ID)
-                    local testId = tonumber(Config.BundleID)
-                    if testId then
-                        idleId = tostring(testId)
-                        walkId = tostring(testId)
-                        runId = tostring(testId)
-                        jumpId = tostring(testId)
-                    end
+            if bundleNum then
+                local success, assetIds = pcall(function()
+                    return AssetService:GetAssetIdsForPackage(bundleNum)
                 end)
+                if success and assetIds then
+                    for _, id in ipairs(assetIds) do
+                        pcall(function()
+                            local info = game:GetService("MarketplaceService"):GetProductInfo(id)
+                            if info and info.AssetTypeId == 24 then
+                                local nameLower = string.lower(info.Name)
+                                if string.find(nameLower, "idle") then idleId = tostring(id)
+                                elseif string.find(nameLower, "walk") then walkId = tostring(id)
+                                elseif string.find(nameLower, "run") then runId = tostring(id)
+                                elseif string.find(nameLower, "jump") then jumpId = tostring(id)
+                                end
+                            end
+                        end)
+                    end
+                else
+                    -- fallback: treat BundleID as a single animation ID if it's numeric
+                    local fallbackId = nil
+                    pcall(function()
+                        fallbackId = tonumber(Config.BundleID)  -- safe
+                    end)
+                    if fallbackId then
+                        idleId, walkId, runId, jumpId = tostring(fallbackId), tostring(fallbackId), tostring(fallbackId), tostring(fallbackId)
+                    end
+                end
             end
         end
     end
 
+    -- Pack presets (if no bundle or bundle failed)
     if not idleId or idleId == "" then
         if pack == "Ninja" then
             idleId, walkId, runId, jumpId = "12114635098", "12114635100", "12114635102", "12114635104"
@@ -751,7 +755,6 @@ applyAnimationPack = function()
     end)
 end
 
--- CharacterAdded now uses the defined function
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.5)
     applyAllSettings()
@@ -846,9 +849,8 @@ RunService.Heartbeat:Connect(function()
         if not flyBodyVelocity or flyBodyVelocity.Parent ~= root then
             setupFly()
         end
-        -- Added nil check before accessing flyBodyVelocity
-        if not flyBodyVelocity then return end
-        
+        if not flyBodyVelocity then return end  -- ✅ nil guard
+
         local moveDir = Vector3.new()
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector * Vector3.new(1,0,1) end
         if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector * Vector3.new(1,0,1) end
@@ -867,12 +869,11 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- ===== TP TOOL – FIXED to avoid multiple connections =====
+-- ===== TP TOOL – FIXED (toggle) =====
 local tpToolActive = false
 local tpConnection = nil
 
 createButton(pageMovement, "📍 TP Tool (Ctrl + Kattintás)", function()
-    -- Toggle the tool on/off
     tpToolActive = not tpToolActive
     if tpToolActive then
         if not tpConnection then
@@ -1057,4 +1058,5 @@ createButton(pageSettings, "💾 Konfiguráció Mentése", function()
     notify("Mentés", "A beállítások elmentve.", 2)
 end)
 
-applyAllSettings()
+-- ✅ Final call wrapped in pcall to prevent crashes
+pcall(applyAllSettings)
