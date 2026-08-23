@@ -29,14 +29,15 @@ end
 loadConfig()
 
 local THEME = {
-    Background = Color3.fromRGB(18, 20, 28),
-    HeaderBg = Color3.fromRGB(24, 27, 38),
-    ContainerBg = Color3.fromRGB(25, 28, 40),
+    Background = Color3.fromRGB(16, 18, 24),
+    HeaderBg = Color3.fromRGB(20, 22, 30),
+    SidebarBg = Color3.fromRGB(20, 22, 30),
+    ContainerBg = Color3.fromRGB(25, 28, 38),
     Accent = Color3.fromRGB(Config.AccentColor[1], Config.AccentColor[2], Config.AccentColor[3]),
-    AccentInactive = Color3.fromRGB(35, 40, 58),
-    Text = Color3.fromRGB(245, 245, 255),
-    TextSub = Color3.fromRGB(150, 155, 180),
-    Border = Color3.fromRGB(45, 52, 75),
+    AccentInactive = Color3.fromRGB(30, 34, 46),
+    Text = Color3.fromRGB(240, 240, 250),
+    TextSub = Color3.fromRGB(140, 145, 170),
+    Border = Color3.fromRGB(40, 45, 65),
     FontBold = Enum.Font.GothamBold,
     FontRegular = Enum.Font.GothamMedium,
 }
@@ -194,9 +195,10 @@ registerAccent(submitKeyBtn, "BackgroundColor3")
 
 makeDraggable(keyTitle, keyFrame)
 
+-- Fő Panel (Szélesebb kialakítás a bal oldali menü miatt)
 local panel = Instance.new("Frame")
 panel.Name = "MainPanel"
-panel.Size = UDim2.new(0, 380, 0, 520)
+panel.Size = UDim2.new(0, 500, 0, 380)
 panel.Position = UDim2.new(0.1, 0, 0.15, 0)
 panel.BackgroundColor3 = THEME.Background
 panel.BorderSizePixel = 0
@@ -208,15 +210,16 @@ local uiScale = Instance.new("UIScale") uiScale.Scale = 1 uiScale.Parent = panel
 local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 10) corner.Parent = panel
 local border = Instance.new("UIStroke") border.Thickness = 1 border.Color = THEME.Border border.Parent = panel
 
+-- Fejléc
 local header = Instance.new("Frame")
-header.Size = UDim2.new(1, 0, 0, 40)
+header.Size = UDim2.new(1, 0, 0, 38)
 header.BackgroundColor3 = THEME.HeaderBg
 header.BorderSizePixel = 0
 header.Parent = panel
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -60, 1, 0)
-titleLabel.Position = UDim2.new(0, 12, 0, 0)
+titleLabel.Position = UDim2.new(0, 15, 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "⚙️ Fabalta Tool v8.5"
 titleLabel.TextColor3 = THEME.Text
@@ -226,8 +229,8 @@ titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = header
 
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 24, 0, 24)
-closeBtn.Position = UDim2.new(1, -30, 0.5, -12)
+closeBtn.Size = UDim2.new(0, 22, 0, 22)
+closeBtn.Position = UDim2.new(1, -28, 0.5, -11)
 closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeBtn.BorderSizePixel = 0
 closeBtn.Text = "✕"
@@ -239,38 +242,53 @@ local cCorner = Instance.new("UICorner") cCorner.CornerRadius = UDim.new(0, 5) c
 
 makeDraggable(header, panel)
 
-local tabBar = Instance.new("Frame")
-tabBar.Size = UDim2.new(1, -20, 0, 30)
-tabBar.Position = UDim2.new(0, 10, 0, 48)
-tabBar.BackgroundTransparency = 1
-tabBar.Parent = panel
+-- Bal oldali Menü sáv (Sidebar)
+local sidebar = Instance.new("ScrollingFrame")
+sidebar.Size = UDim2.new(0, 130, 1, -68)
+sidebar.Position = UDim2.new(0, 0, 0, 38)
+sidebar.BackgroundColor3 = THEME.SidebarBg
+sidebar.BorderSizePixel = 0
+sidebar.CanvasSize = UDim2.new(0, 0, 0, 0)
+sidebar.AutomaticCanvasSize = Enum.AutomaticSize.Y
+sidebar.ScrollBarThickness = 2
+sidebar.Parent = panel
 
-local tabLayout = Instance.new("UIListLayout")
-tabLayout.FillDirection = Enum.FillDirection.Horizontal
-tabLayout.Padding = UDim.new(0, 4)
-tabLayout.Parent = tabBar
+local sidebarLayout = Instance.new("UIListLayout")
+sidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+sidebarLayout.Padding = UDim.new(0, 4)
+sidebarLayout.Parent = sidebar
 
+local sidebarPadding = Instance.new("UIPadding")
+sidebarPadding.PaddingTop = UDim.new(0, 8)
+sidebarPadding.PaddingBottom = UDim.new(0, 8)
+sidebarPadding.PaddingLeft = UDim.new(0, 8)
+sidebarPadding.PaddingRight = UDim.new(0, 8)
+sidebarPadding.Parent = sidebar
+
+-- Tartalom Terület (Jobb oldalon)
 local contentArea = Instance.new("Frame")
-contentArea.Size = UDim2.new(1, -20, 1, -110)
-contentArea.Position = UDim2.new(0, 10, 0, 85)
+contentArea.Size = UDim2.new(1, -140, 1, -48)
+contentArea.Position = UDim2.new(0, 135, 0, 43)
 contentArea.BackgroundTransparency = 1
 contentArea.ClipsDescendants = false
 contentArea.Parent = panel
 
 local mainToggleKey = Enum.KeyCode[Config.ToggleKey] or Enum.KeyCode.F12
 local footer = Instance.new("TextLabel")
-footer.Size = UDim2.new(1, 0, 0, 20)
-footer.Position = UDim2.new(0, 0, 1, -22)
-footer.BackgroundTransparency = 1
-footer.Text = "Rejtés/Megnyitás: [" .. mainToggleKey.Name .. "]"
+footer.Size = UDim2.new(0, 130, 0, 30)
+footer.Position = UDim2.new(0, 0, 1, -30)
+footer.BackgroundColor3 = THEME.HeaderBg
+footer.BackgroundTransparency = 0.5
+footer.BorderSizePixel = 0
+footer.Text = "[" .. mainToggleKey.Name .. "]"
 footer.TextColor3 = THEME.TextSub
 footer.TextSize = 10
 footer.Font = THEME.FontRegular
 footer.Parent = panel
 
 local cleanupConnections = {}
-
 local isUnlocked = false
+
 local function unlockSuite()
     isUnlocked = true
     keyFrame:Destroy()
@@ -310,18 +328,20 @@ local currentTab = nil
 
 local function createTab(name)
     local tabBtn = Instance.new("TextButton")
-    tabBtn.Size = UDim2.new(0.158, 0, 1, 0)
+    tabBtn.Size = UDim2.new(1, 0, 0, 32)
     tabBtn.BackgroundColor3 = THEME.AccentInactive
     tabBtn.BorderSizePixel = 0
-    tabBtn.Text = name
+    tabBtn.Text = "  " .. name
     tabBtn.TextColor3 = THEME.TextSub
-    tabBtn.TextSize = 10
+    tabBtn.TextSize = 11
     tabBtn.Font = THEME.FontBold
-    tabBtn.Parent = tabBar
-    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 5) c.Parent = tabBtn
+    tabBtn.TextXAlignment = Enum.TextXAlignment.Left
+    tabBtn.Parent = sidebar
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 6) c.Parent = tabBtn
 
     local scroll = Instance.new("ScrollingFrame")
-    scroll.Size = UDim2.new(1, 0, 1, 0)
+    scroll.Size = UDim2.new(1, -10, 1, 0)
+    scroll.Position = UDim2.new(0, 0, 0, 0)
     scroll.BackgroundTransparency = 1
     scroll.BorderSizePixel = 0
     scroll.ScrollBarThickness = 3
@@ -338,9 +358,9 @@ local function createTab(name)
     list.Parent = scroll
 
     local pad = Instance.new("UIPadding")
-    pad.PaddingRight = UDim.new(0, 4)
+    pad.PaddingRight = UDim.new(0, 8)
     pad.PaddingTop = UDim.new(0, 2)
-    pad.PaddingBottom = UDim.new(0, 6)
+    pad.PaddingBottom = UDim.new(0, 10)
     pad.Parent = scroll
 
     tabBtn.MouseButton1Click:Connect(function()
@@ -527,7 +547,7 @@ local pageCombat = createTab("Harcos")
 local pageUtility = createTab("Ezközök")
 local pageSettings = createTab("Beállítások")
 
--- ================= CLEAN ANIMÁCIÓS CSOMAG MENÜ =================
+-- ================= ANIMÁCIÓS CSOMAG MENÜ =================
 local animationPacks = {
     { Name = "🕺 Zombie Pack", Id = "rbxassetid://616158082" },
     { Name = "🥷 Ninja Pack", Id = "rbxassetid://656117400" },
