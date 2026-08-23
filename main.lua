@@ -1,8 +1,6 @@
 --[[
     Fabalta Tool v10.1 – Max Edition
-    – Fixed major bugs
-    – Added Animation Pack Changer
-    – Key loaded ONLY from key.txt
+    KEY IS HARDCODED INSIDE THE SCRIPT
 ]]
 
 local Players = game:GetService("Players")
@@ -16,8 +14,14 @@ local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")  -- or use CoreGui if needed
 local Camera = workspace.CurrentCamera
+
+-- ================================================
+--  CHANGE THIS KEY TO YOUR PREFERRED PASSWORD
+-- ================================================
+local CORRECT_KEY = "mysecret123"   -- <-- SET YOUR KEY HERE
+-- ================================================
 
 -- ========== CONFIG ==========
 local CONFIG_FILE = "FabaltaTool_Max.json"
@@ -38,7 +42,7 @@ local Config = {
     ESP = false,
     SilentAim = false,
     -- Animation settings
-    AnimPack = "Default",  -- Default, Ninja, Robot, Cartoon, Custom
+    AnimPack = "Default",
     AnimIdle = "",
     AnimWalk = "",
     AnimRun = "",
@@ -60,25 +64,6 @@ local function saveConfig()
     end
 end
 loadConfig()
-
--- ========== KEY VALIDATION – ONLY FROM key.txt ==========
-local CORRECT_KEY = ""
-local keyMissing = false
-if isfile and isfile("key.txt") then
-    pcall(function()
-        local loadedKey = readfile("key.txt"):gsub("%s+", "")
-        if loadedKey ~= "" then
-            CORRECT_KEY = loadedKey
-        else
-            keyMissing = true
-        end
-    end)
-else
-    keyMissing = true
-end
-if keyMissing then
-    warn("key.txt not found or empty – unlock will be impossible.")
-end
 
 -- ========== THEME ==========
 local THEME = {
@@ -217,10 +202,10 @@ keyInput.Size = UDim2.new(0.88, 0, 0, 36)
 keyInput.Position = UDim2.new(0.06, 0, 0.35, 0)
 keyInput.BackgroundColor3 = THEME.ContainerBg
 keyInput.BorderSizePixel = 0
-keyInput.PlaceholderText = keyMissing and "⚠️ key.txt HIÁNYZIK" or "Illeszd be a kulcsot..."
+keyInput.PlaceholderText = "Add meg a kulcsot..."
 keyInput.Text = ""
 keyInput.TextColor3 = THEME.Text
-keyInput.PlaceholderColor3 = keyMissing and Color3.fromRGB(255, 100, 100) or THEME.TextSub
+keyInput.PlaceholderColor3 = THEME.TextSub
 keyInput.TextSize = 11
 keyInput.Font = THEME.FontRegular
 keyInput.Parent = keyFrame
@@ -244,7 +229,7 @@ makeDraggable(keyTitle, keyFrame)
 -- ========== MAIN PANEL ==========
 local panel = Instance.new("Frame")
 panel.Name = "MainPanel"
-panel.Size = UDim2.new(0, 580, 0, 460)  -- taller for animations
+panel.Size = UDim2.new(0, 580, 0, 460)
 panel.Position = UDim2.new(0.1, 0, 0.15, 0)
 panel.BackgroundColor3 = THEME.Background
 panel.BorderSizePixel = 0
@@ -333,7 +318,6 @@ local function unlockSuite()
     keyFrame:Destroy()
     panel.Visible = true
     notify("Sikeres Belépés", "Minden modul aktív.", 3)
-    -- Load animations after unlock
     task.wait(0.5)
     applyAnimationPack()
 end
@@ -667,7 +651,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ========== ANIMATION PACK SYSTEM ==========
-local currentAnimations = {} -- tracks loaded AnimationTrack objects
+local currentAnimations = {}
 
 local function stopAllAnimations(animator)
     if not animator then return end
@@ -675,7 +659,6 @@ local function stopAllAnimations(animator)
         pcall(function() track:Stop() end)
     end
     currentAnimations = {}
-    -- also stop all other animations
     for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
         pcall(function() track:Stop() end)
     end
@@ -683,11 +666,12 @@ end
 
 local function loadAnimation(animator, animId)
     if not animator or animId == "" then return nil end
-    local success, anim = pcall(function()
-        return Instance.new("Animation")
+    local anim
+    pcall(function()
+        anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://" .. animId:gsub("%D+", "")
     end)
-    if not success then return nil end
-    anim.AnimationId = "rbxassetid://" .. animId:gsub("%D+", "")
+    if not anim then return nil end
     local track
     pcall(function()
         track = animator:LoadAnimation(anim)
@@ -710,9 +694,9 @@ local function applyAnimationPack()
     local idleId, walkId, runId, jumpId
 
     if pack == "Default" then
-        -- Leave empty to use default game animations
+        -- use default game animations
     elseif pack == "Ninja" then
-        idleId = "12114635098"  -- example, replace with actual
+        idleId = "12114635098"
         walkId = "12114635100"
         runId = "12114635102"
         jumpId = "12114635104"
@@ -776,7 +760,6 @@ end)
 
 createToggle(pageMovement, "Noclip", "🧱 Noclip (Falon átjárás)", false, function(enabled)
     Config.Noclip = enabled
-    -- if disabled, reset collision on all parts
     if not enabled and LocalPlayer.Character then
         for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
             if part:IsA("BasePart") and part.CanCollide == false then
@@ -796,7 +779,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Fly mode with BodyVelocity
 local flyBodyVelocity = nil
 local function setupFly()
     local root = getRoot()
@@ -952,7 +934,6 @@ end)
 createToggle(pageVisuals, "ESP", "👁️ ESP (Játékosok)", false, function(enabled)
     Config.ESP = enabled
     if not enabled then
-        -- remove all ESP guis
         for _, player in ipairs(Players:GetPlayers()) do
             if player.Character then
                 local esp = player.Character:FindFirstChild("ESP_Gui")
@@ -995,7 +976,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Player removal cleanup
 Players.PlayerRemoving:Connect(function(player)
     if player.Character then
         local esp = player.Character:FindFirstChild("ESP_Gui")
@@ -1018,7 +998,6 @@ createToggle(pageUtility, "AntiAFK", "🛡️ Anti-AFK (Kitiltás ellen)", true,
     end
 end)
 
--- Trigger initial anti-afk if enabled
 if Config.AntiAFK then
     antiAfkConnection = LocalPlayer.Idled:Connect(function()
         pcall(function()
@@ -1057,7 +1036,6 @@ local function createAnimPackButton(parent, packName)
     btn.MouseButton1Click:Connect(function()
         Config.AnimPack = packName
         saveConfig()
-        -- update button styles
         for name, b in pairs(animPackButtons) do
             b.BackgroundColor3 = (name == packName) and THEME.Accent or THEME.ContainerBg
             b.TextColor3 = (name == packName) and Color3.fromRGB(255,255,255) or THEME.Text
@@ -1068,32 +1046,24 @@ local function createAnimPackButton(parent, packName)
     return btn
 end
 
--- Create pack selection area
-local animContainer = pageAnim
--- Preset buttons
 local packNames = {"Default", "Ninja", "Robot", "Cartoon", "Custom"}
 for _, name in ipairs(packNames) do
-    local btn = createAnimPackButton(animContainer, name)
+    local btn = createAnimPackButton(pageAnim, name)
     animPackButtons[name] = btn
 end
 
--- Custom animation ID inputs (only visible/editable when Custom is selected)
-createTextBox(animContainer, "AnimIdle", "Idle ID", "pl.: 1234567890", function()
+createTextBox(pageAnim, "AnimIdle", "Idle ID", "pl.: 1234567890", function()
     if Config.AnimPack == "Custom" then applyAnimationPack() end
 end)
-createTextBox(animContainer, "AnimWalk", "Walk ID", "pl.: 1234567890", function()
+createTextBox(pageAnim, "AnimWalk", "Walk ID", "pl.: 1234567890", function()
     if Config.AnimPack == "Custom" then applyAnimationPack() end
 end)
-createTextBox(animContainer, "AnimRun", "Run ID", "pl.: 1234567890", function()
+createTextBox(pageAnim, "AnimRun", "Run ID", "pl.: 1234567890", function()
     if Config.AnimPack == "Custom" then applyAnimationPack() end
 end)
-createTextBox(animContainer, "AnimJump", "Jump ID", "pl.: 1234567890", function()
+createTextBox(pageAnim, "AnimJump", "Jump ID", "pl.: 1234567890", function()
     if Config.AnimPack == "Custom" then applyAnimationPack() end
 end)
-
--- Apply current pack on load
-task.wait(0.5)
-if isUnlocked then applyAnimationPack() end
 
 -- ===== BEÁLLÍTÁSOK =====
 createButton(pageSettings, "🎨 Kék Téma", function() setAccentColor(Color3.fromRGB(90, 160, 255)) end)
@@ -1112,7 +1082,6 @@ createButton(pageSettings, "🔁 Minden visszaállítása", function()
     saveConfig()
     applyAllSettings()
     applyAnimationPack()
-    -- update UI button states
     for name, btn in pairs(animPackButtons) do
         btn.BackgroundColor3 = (name == "Default") and THEME.Accent or THEME.ContainerBg
         btn.TextColor3 = (name == "Default") and Color3.fromRGB(255,255,255) or THEME.Text
@@ -1122,5 +1091,7 @@ end)
 
 -- Apply initial settings
 applyAllSettings()
+task.wait(0.5)
+applyAnimationPack()
 
 notify("Fabalta v10.1", "Fejlesztett verzió + animációk betöltve!", 3)
