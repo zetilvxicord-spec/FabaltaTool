@@ -1,5 +1,5 @@
 --[[
-    Fabalta Tool v10.1 – Max Edition (Refactored & Fixed)
+    Fabalta Tool v10.3 – Max Edition (Key Close Button Added)
     KEY IS HARDCODED INSIDE THE SCRIPT
 ]]
 
@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local Lighting = game:GetService("Lighting")
+local AssetService = game:GetService("AssetService")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -39,6 +40,7 @@ local Config = {
     ESP = false,
     SilentAim = false,
     AnimPack = "Default",
+    BundleID = "",
     AnimIdle = "",
     AnimWalk = "",
     AnimRun = "",
@@ -185,13 +187,31 @@ local kCorner = Instance.new("UICorner") kCorner.CornerRadius = UDim.new(0, 10) 
 local kBorder = Instance.new("UIStroke") kBorder.Thickness = 1 kBorder.Color = THEME.Border kBorder.Parent = keyFrame
 
 local keyTitle = Instance.new("TextLabel")
-keyTitle.Size = UDim2.new(1, 0, 0, 45)
+keyTitle.Size = UDim2.new(1, -40, 0, 45)
+keyTitle.Position = UDim2.new(0, 12, 0, 0)
 keyTitle.BackgroundTransparency = 1
 keyTitle.Text = "🔐 Fabalta Kulcs Hitelesítés"
 keyTitle.TextColor3 = THEME.Text
 keyTitle.TextSize = 14
 keyTitle.Font = THEME.FontBold
+keyTitle.TextXAlignment = Enum.TextXAlignment.Left
 keyTitle.Parent = keyFrame
+
+local keyCloseBtn = Instance.new("TextButton")
+keyCloseBtn.Size = UDim2.new(0, 22, 0, 22)
+keyCloseBtn.Position = UDim2.new(1, -28, 0, 11)
+keyCloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+keyCloseBtn.BorderSizePixel = 0
+keyCloseBtn.Text = "X"
+keyCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyCloseBtn.TextSize = 11
+keyCloseBtn.Font = THEME.FontBold
+keyCloseBtn.Parent = keyFrame
+local kcCorner = Instance.new("UICorner") kcCorner.CornerRadius = UDim.new(0, 5) kcCorner.Parent = keyCloseBtn
+
+keyCloseBtn.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+end)
 
 local keyInput = Instance.new("TextBox")
 keyInput.Size = UDim2.new(0.88, 0, 0, 36)
@@ -246,7 +266,7 @@ local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -60, 1, 0)
 titleLabel.Position = UDim2.new(0, 15, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "⚙️ Fabalta Tool v10.1 (Max Edition)"
+titleLabel.Text = "⚙️ Fabalta Tool v10.3 (Max Edition)"
 titleLabel.TextColor3 = THEME.Text
 titleLabel.TextSize = 13
 titleLabel.Font = THEME.FontBold
@@ -258,7 +278,7 @@ closeBtn.Size = UDim2.new(0, 22, 0, 22)
 closeBtn.Position = UDim2.new(1, -28, 0.5, -11)
 closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeBtn.BorderSizePixel = 0
-closeBtn.Text = "X" -- Fixed: Replaced unicode symbol with standard "X"
+closeBtn.Text = "X"
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeBtn.TextSize = 11
 closeBtn.Font = THEME.FontBold
@@ -649,7 +669,7 @@ LocalPlayer.CharacterAdded:Connect(function()
     applyAnimationPack()
 end)
 
--- ========== ANIMATION PACK SYSTEM (NATIVE ANIMATE SCRIPT OVERRIDE) ==========
+-- ========== ANIMATION PACK SYSTEM (BUNDLE & NATIVE OVERRIDE) ==========
 applyAnimationPack = function()
     local char = getChar()
     if not char then return end
@@ -659,31 +679,44 @@ applyAnimationPack = function()
     local pack = Config.AnimPack
     local idleId, walkId, runId, jumpId
 
-    if pack == "Ninja" then
-        idleId = "12114635098"
-        walkId = "12114635100"
-        runId = "12114635102"
-        jumpId = "12114635104"
-    elseif pack == "Robot" then
-        idleId = "6150272929"
-        walkId = "6150272946"
-        runId = "6150272961"
-        jumpId = "6150272980"
-    elseif pack == "Cartoon" then
-        idleId = "5077696589"
-        walkId = "5077696597"
-        runId = "5077696603"
-        jumpId = "5077696609"
-    elseif pack == "Custom" then
-        idleId = Config.AnimIdle
-        walkId = Config.AnimWalk
-        runId = Config.AnimRun
-        jumpId = Config.AnimJump
+    if Config.BundleID and Config.BundleID ~= "" then
+        local bundleNum = tonumber(Config.BundleID:gsub("%D+", ""))
+        if bundleNum then
+            local success, assetIds = pcall(function()
+                return AssetService:GetAssetIdsForPackage(bundleNum)
+            end)
+            if success and assetIds then
+                for _, id in ipairs(assetIds) do
+                    pcall(function()
+                        local info = game:GetService("MarketplaceService"):GetProductInfo(id)
+                        if info and info.AssetTypeId == 24 then
+                            local nameLower = string.lower(info.Name)
+                            if string.find(nameLower, "idle") then idleId = tostring(id)
+                            elseif string.find(nameLower, "walk") then walkId = tostring(id)
+                            elseif string.find(nameLower, "run") then runId = tostring(id)
+                            elseif string.find(nameLower, "jump") then jumpId = tostring(id)
+                            end
+                        end
+                    end)
+                end
+            end
+        end
+    end
+
+    if not idleId or idleId == "" then
+        if pack == "Ninja" then
+            idleId, walkId, runId, jumpId = "12114635098", "12114635100", "12114635102", "12114635104"
+        elseif pack == "Robot" then
+            idleId, walkId, runId, jumpId = "6150272929", "6150272946", "6150272961", "6150272980"
+        elseif pack == "Cartoon" then
+            idleId, walkId, runId, jumpId = "5077696589", "5077696597", "5077696603", "5077696609"
+        elseif pack == "Custom" then
+            idleId, walkId, runId, jumpId = Config.AnimIdle, Config.AnimWalk, Config.AnimRun, Config.AnimJump
+        end
     end
 
     pcall(function()
-        if pack == "Default" then
-            -- Let native handle default
+        if pack == "Default" and (not Config.BundleID or Config.BundleID == "") then
             return
         end
 
@@ -967,15 +1000,17 @@ createButton(pageUtility, "📦 Reset Karakter", function()
 end)
 
 -- ===== ANIMÁCIÓK =====
+createTextBox(pageAnim, "BundleID", "📦 Bundle ID (Csomag)", "Írd ide a Bundle ID-t...", function() applyAnimationPack() end)
+
 createButton(pageAnim, "🔄 Animáció Csomag Frissítése", function()
     applyAnimationPack()
-    notify("Animációk", "Csomag sikeresen alkalmazva.", 2)
+    notify("Animációk", "Csomag / Bundle betöltve.", 2)
 end)
 
-createTextBox(pageAnim, "AnimIdle", "Idle Anim ID", "Add meg az ID-t...", function() applyAnimationPack() end)
-createTextBox(pageAnim, "AnimWalk", "Walk Anim ID", "Add meg az ID-t...", function() applyAnimationPack() end)
-createTextBox(pageAnim, "AnimRun", "Run Anim ID", "Add meg az ID-t...", function() applyAnimationPack() end)
-createTextBox(pageAnim, "AnimJump", "Jump Anim ID", "Add meg az ID-t...", function() applyAnimationPack() end)
+createTextBox(pageAnim, "AnimIdle", "Egyedi Idle ID", "Add meg az ID-t...", function() applyAnimationPack() end)
+createTextBox(pageAnim, "AnimWalk", "Egyedi Walk ID", "Add meg az ID-t...", function() applyAnimationPack() end)
+createTextBox(pageAnim, "AnimRun", "Egyedi Run ID", "Add meg az ID-t...", function() applyAnimationPack() end)
+createTextBox(pageAnim, "AnimJump", "Egyedi Jump ID", "Add meg az ID-t...", function() applyAnimationPack() end)
 
 -- ===== BEÁLLÍTÁSOK =====
 createTextBox(pageSettings, "ToggleKey", "Menü Gyorsbillentyű", "Pl. F12", function()
