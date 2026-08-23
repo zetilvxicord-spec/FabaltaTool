@@ -20,7 +20,7 @@ local Camera = workspace.CurrentCamera
 -- ================================================
 --  CHANGE THIS KEY TO YOUR PREFERRED PASSWORD
 -- ================================================
-local CORRECT_KEY = "mysecret123"   -- <-- SET YOUR KEY HERE
+local CORRECT_KEY = "7YLhpY0bzXe9AyO5obJa2AOPhFmeIsMQ8sEG8XgE9SEbRJIW2grBBqeCTSb5viIi9d"   -- <-- SET YOUR KEY HERE
 -- ================================================
 
 -- ========== CONFIG ==========
