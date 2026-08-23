@@ -227,28 +227,41 @@ header.BackgroundTransparency = 1
 header.Parent = panel
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -50, 1, 0)
+titleLabel.Size = UDim2.new(1, -70, 1, 0)
 titleLabel.Position = UDim2.new(0, 15, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "⚙️ Fabalta Tool v8.0"
+titleLabel.Text = "⚙️ Fabalta Tool v8.5"
 titleLabel.TextColor3 = THEME.Text
 titleLabel.TextSize = 16
 titleLabel.Font = THEME.FontBold
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = header
 
-local hideBtn = Instance.new("TextButton")
-hideBtn.Size = UDim2.new(0, 26, 0, 26)
-hideBtn.Position = UDim2.new(1, -36, 0.5, -13)
-hideBtn.BackgroundColor3 = THEME.AccentInactive
-hideBtn.BackgroundTransparency = 0.5
-hideBtn.BorderSizePixel = 0
-hideBtn.Text = "✕"
-hideBtn.TextColor3 = THEME.Text
-hideBtn.TextSize = 12
-hideBtn.Font = THEME.FontBold
-hideBtn.Parent = header
-local hCorner = Instance.new("UICorner") hCorner.CornerRadius = UDim.new(0, 13) hCorner.Parent = hideBtn
+local minimizeBtn = Instance.new("TextButton")
+minimizeBtn.Size = UDim2.new(0, 26, 0, 26)
+minimizeBtn.Position = UDim2.new(1, -66, 0.5, -13)
+minimizeBtn.BackgroundColor3 = THEME.AccentInactive
+minimizeBtn.BackgroundTransparency = 0.5
+minimizeBtn.BorderSizePixel = 0
+minimizeBtn.Text = "-"
+minimizeBtn.TextColor3 = THEME.Text
+minimizeBtn.TextSize = 14
+minimizeBtn.Font = THEME.FontBold
+minimizeBtn.Parent = header
+local mCorner = Instance.new("UICorner") mCorner.CornerRadius = UDim.new(0, 13) mCorner.Parent = minimizeBtn
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 26, 0, 26)
+closeBtn.Position = UDim2.new(1, -34, 0.5, -13)
+closeBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+closeBtn.BackgroundTransparency = 0.2
+closeBtn.BorderSizePixel = 0
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = THEME.Text
+closeBtn.TextSize = 12
+closeBtn.Font = THEME.FontBold
+closeBtn.Parent = header
+local cCorner = Instance.new("UICorner") cCorner.CornerRadius = UDim.new(0, 13) cCorner.Parent = closeBtn
 
 makeDraggable(header, panel)
 
@@ -281,12 +294,14 @@ footer.TextSize = 11
 footer.Font = THEME.FontRegular
 footer.Parent = panel
 
+local cleanupConnections = {}
+
 local isUnlocked = false
 local function unlockSuite()
     isUnlocked = true
     keyFrame:Destroy()
     panel.Visible = true
-    notify("Rendszer Feloldva", "Üdvözöl a Fabalta Tool v8.0!", 4)
+    notify("Rendszer Feloldva", "Üdvözöl a Fabalta Tool v8.5!", 4)
 end
 
 submitKeyBtn.MouseButton1Click:Connect(function()
@@ -307,7 +322,19 @@ local function setPanelVisibility(state)
     end
 end
 
-hideBtn.MouseButton1Click:Connect(function() setPanelVisibility(false) end)
+minimizeBtn.MouseButton1Click:Connect(function() setPanelVisibility(false) end)
+
+local function closeScript()
+    for _, conn in ipairs(cleanupConnections) do
+        if conn and conn.Disconnect then conn:Disconnect() end
+    end
+    notify("Fabalta Tool", "A felület teljesen bezárult.", 2)
+    task.wait(0.3)
+    screenGui:Destroy()
+end
+
+closeBtn.MouseButton1Click:Connect(closeScript)
+
 UserInputService.InputBegan:Connect(function(input, processed)
     if not processed and input.KeyCode == mainToggleKey then setPanelVisibility(not isVisible) end
 end)
@@ -538,10 +565,28 @@ createToggle(pageMovement, "InfJump", "🦘 Végtelen Ugrás", false, function(e
     infJumpEnabled = enabled
 end)
 
-UserInputService.JumpRequest:Connect(function()
+local jumpConn = UserInputService.JumpRequest:Connect(function()
     if infJumpEnabled then
         local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end
+end)
+table.insert(cleanupConnections, jumpConn)
+
+local noclipEnabled, noclipConn = false, nil
+createToggle(pageMovement, "Noclip", "🧱 Noclip (Falon Átjárás)", false, function(enabled)
+    noclipEnabled = enabled
+    if enabled then
+        noclipConn = RunService.Stepped:Connect(function()
+            if LocalPlayer.Character then
+                for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end)
+        table.insert(cleanupConnections, noclipConn)
+    else
+        if noclipConn then noclipConn:Disconnect() noclipConn = nil end
     end
 end)
 
@@ -566,6 +611,7 @@ createToggle(pageMovement, "FlyMode", "✈️ Repülés Mód", false, function(e
             if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
             bv.velocity = moveDir * flySpeed
         end)
+        table.insert(cleanupConnections, flyConn)
     else
         if flyConn then flyConn:Disconnect() flyConn = nil end
         if root then
@@ -575,7 +621,9 @@ createToggle(pageMovement, "FlyMode", "✈️ Repülés Mód", false, function(e
     end
 end)
 
-local aimbotEnabled, aimbotConn = false, nil
+local aimbotEnabled, aimbotConn, aimSmoothness = false, nil, 0.2
+createSlider(pageCombat, "AimSmooth", "🎯 Aimbot Simítás", 1, 10, 2, function(val) aimSmoothness = val / 10 end)
+
 createToggle(pageCombat, "Aimbot", "🎯 Aimbot (Jobb Egérgomb Tartás)", false, function(enabled)
     aimbotEnabled = enabled
     if enabled then
@@ -595,10 +643,12 @@ createToggle(pageCombat, "Aimbot", "🎯 Aimbot (Jobb Egérgomb Tartás)", false
                     end
                 end
                 if closestPlayer and closestPlayer.Character:FindFirstChild("Head") then
-                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, closestPlayer.Character.Head.Position)
+                    local targetCFrame = CFrame.new(Camera.CFrame.Position, closestPlayer.Character.Head.Position)
+                    Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, aimSmoothness)
                 end
             end
         end)
+        table.insert(cleanupConnections, aimbotConn)
     else
         if aimbotConn then aimbotConn:Disconnect() aimbotConn = nil end
     end
@@ -709,6 +759,7 @@ executeFlingBtn.MouseButton1Click:Connect(function()
             myRoot.Velocity = Vector3.new(10000, 10000, 10000)
             myRoot.CFrame = targetRoot.CFrame * CFrame.Angles(0, math.rad(angle), 0) * CFrame.new(0, 0, 1.5)
         end)
+        table.insert(cleanupConnections, flingConn)
     else
         notify("Fling Hiba", "Érvénytelen célpont!", 2)
     end
@@ -775,14 +826,124 @@ createToggle(pageVisuals, "ESP", "👁️ Játékos ESP (Kiemelés)", false, fun
     espEnabled = enabled
     if enabled then
         for _, p in ipairs(Players:GetPlayers()) do applyEsp(p) end
-        Players.PlayerAdded:Connect(applyEsp)
-        Players.PlayerRemoving:Connect(removeEsp)
+        local pAdd = Players.PlayerAdded:Connect(applyEsp)
+        local pRem = Players.PlayerRemoving:Connect(removeEsp)
+        table.insert(cleanupConnections, pAdd)
+        table.insert(cleanupConnections, pRem)
     else
         for p, _ in pairs(espCache) do removeEsp(p) end
     end
 end)
 
+local tracersEnabled, tracerLines = false, {}
+createToggle(pageVisuals, "Tracers", "📍 Tracers (Vonalak)", false, function(enabled)
+    tracersEnabled = enabled
+    if not enabled then
+        for _, line in pairs(tracerLines) do line:Remove() end
+        tracerLines = {}
+    end
+end)
+
+local tracerConn = RunService.RenderStepped:Connect(function()
+    if not tracersEnabled then return end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local pos, onScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+            if onScreen then
+                local line = tracerLines[p] or Drawing.new("Line")
+                line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                line.To = Vector2.new(pos.X, pos.Y)
+                line.Color = THEME.Accent
+                line.Thickness = 1.5
+                line.Transparency = 1
+                line.Visible = true
+                tracerLines[p] = line
+            elseif tracerLines[p] then
+                tracerLines[p].Visible = false
+            end
+        elseif tracerLines[p] then
+            tracerLines[p].Visible = false
+        end
+    end
+end)
+table.insert(cleanupConnections, tracerConn)
+
 createSlider(pageVisuals, "TimeOfDay", "☀️ Napszak (Óra)", 0, 24, 14, function(val) Lighting.ClockTime = val end)
+
+local selectedTpTarget = nil
+local tpContainer = Instance.new("Frame")
+tpContainer.Size = UDim2.new(1, 0, 0, 55)
+tpContainer.BackgroundTransparency = 1
+tpContainer.Parent = pageUtility
+
+local tpBtn = Instance.new("TextButton")
+tpBtn.Size = UDim2.new(1, 0, 0, 26)
+tpBtn.BackgroundColor3 = THEME.AccentInactive
+tpBtn.Text = "Játékos Kiválasztása TP-hez..."
+tpBtn.TextColor3 = THEME.TextSub
+tpBtn.TextSize = 11
+tpBtn.Font = THEME.FontRegular
+tpBtn.Parent = tpContainer
+
+local execTpBtn = Instance.new("TextButton")
+execTpBtn.Size = UDim2.new(1, 0, 0, 24)
+execTpBtn.Position = UDim2.new(0, 0, 0, 30)
+execTpBtn.BackgroundColor3 = THEME.Accent
+execTpBtn.Text = "📍 Teleportálás"
+execTpBtn.TextColor3 = THEME.Text
+execTpBtn.TextSize = 11
+execTpBtn.Font = THEME.FontBold
+execTpBtn.Parent = tpContainer
+registerAccent(execTpBtn, "BackgroundColor3")
+
+local tpDropdownList = Instance.new("ScrollingFrame")
+tpDropdownList.Size = UDim2.new(1, 0, 0, 90)
+tpDropdownList.Position = UDim2.new(0, 0, 0, 26)
+tpDropdownList.BackgroundColor3 = THEME.Background
+tpDropdownList.BorderSizePixel = 1
+tpDropdownList.BorderColor3 = THEME.Border
+tpDropdownList.Visible = false
+tpDropdownList.ZIndex = 14
+tpDropdownList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+tpDropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
+tpDropdownList.Parent = tpContainer
+
+local tpListLayout = Instance.new("UIListLayout") tpListLayout.Parent = tpDropdownList
+
+tpBtn.MouseButton1Click:Connect(function()
+    tpDropdownList.Visible = not tpDropdownList.Visible
+    if tpDropdownList.Visible then
+        for _, child in ipairs(tpDropdownList:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then
+                local pBtn = Instance.new("TextButton")
+                pBtn.Size = UDim2.new(1, 0, 0, 22)
+                pBtn.BackgroundColor3 = THEME.AccentInactive
+                pBtn.Text = p.DisplayName
+                pBtn.TextColor3 = THEME.Text
+                pBtn.TextSize = 10
+                pBtn.Font = THEME.FontRegular
+                pBtn.ZIndex = 15
+                pBtn.Parent = tpDropdownList
+                pBtn.MouseButton1Click:Connect(function()
+                    selectedTpTarget = p
+                    tpBtn.Text = p.DisplayName
+                    tpDropdownList.Visible = false
+                end)
+            end
+        end
+    end
+end)
+
+execTpBtn.MouseButton1Click:Connect(function()
+    if selectedTpTarget and selectedTpTarget.Character and selectedTpTarget.Character:FindFirstChild("HumanoidRootPart") then
+        local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if myRoot then
+            myRoot.CFrame = selectedTpTarget.Character.HumanoidRootPart.CFrame
+            notify("Teleport", "Elteleportáltál hozzá: " .. selectedTpTarget.DisplayName, 2)
+        end
+    end
+end)
 
 createButton(pageUtility, "🔄 Újracsatlakozás (Rejoin)", function()
     notify("Szerver", "Újracsatlakozás a szerverre...", 2)
@@ -810,6 +971,7 @@ createToggle(pageUtility, "AntiAfk", "💤 Anti-AFK (Kidobás Elleni Védelem)",
             VirtualUser:ClickButton2(Vector2.new())
             notify("Anti-AFK", "Inaktivitási kidobás megakadályozva.", 2)
         end)
+        table.insert(cleanupConnections, afkConn)
     elseif afkConn then afkConn:Disconnect() afkConn = nil end
 end)
 
@@ -846,3 +1008,8 @@ for i, colData in ipairs(colors) do
     local cCorner = Instance.new("UICorner") cCorner.CornerRadius = UDim.new(1, 0) cCorner.Parent = cBtn
     cBtn.MouseButton1Click:Connect(function() setAccentColor(colData.Color) end)
 end
+
+createButton(pageSettings, "🗑️ Beállítások Törlése", function()
+    if writefile then pcall(function() writefile(CONFIG_FILE, "{}") end) end
+    notify("Beállítások", "Beállítások alaphelyzetbe állítva.", 2)
+end)
