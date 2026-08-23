@@ -1,8 +1,3 @@
--- =====================================================================
---  FABALTA TOOL v7.1 – Magyar Kiadás
---  Téma: Obsidian Glass UI | Alapértelmezett gomb: F12 | Kulcs: TOOLSUITE2026
--- =====================================================================
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -16,9 +11,6 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Camera = workspace.CurrentCamera
 
--- ----------------------------------------------------------------
---  BEÁLLÍTÁSOK ÉS TÉMA RENDSZER
--- ----------------------------------------------------------------
 local CONFIG_FILE = "FabaltaTool_Config.json"
 local Config = {
     ToggleKey = "F12",
@@ -73,9 +65,6 @@ local function setAccentColor(col)
     end
 end
 
--- ----------------------------------------------------------------
---  FŐ KÉPERNYŐ GUI ÉS ÉRTESÍTÉSEK
--- ----------------------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "FabaltaTool"
 screenGui.ResetOnSpawn = false
@@ -137,9 +126,6 @@ local function notify(title, msg, duration)
     end)
 end
 
--- ----------------------------------------------------------------
---  SEGÉDFUNKCIÓK: MOZGATHATÓ ABLAKOK
--- ----------------------------------------------------------------
 local function makeDraggable(dragHandle, targetFrame)
     local dragging, dragInput, dragStart, startPos
     dragHandle.InputBegan:Connect(function(input)
@@ -167,9 +153,6 @@ local function makeDraggable(dragHandle, targetFrame)
     end)
 end
 
--- ----------------------------------------------------------------
---  KULCS RENDSZER ABLAK
--- ----------------------------------------------------------------
 local CORRECT_KEY = "TOOLSUITE2026"
 
 local keyFrame = Instance.new("Frame")
@@ -221,9 +204,6 @@ registerAccent(submitKeyBtn, "BackgroundColor3")
 
 makeDraggable(keyTitle, keyFrame)
 
--- ----------------------------------------------------------------
---  FŐPANEL
--- ----------------------------------------------------------------
 local panel = Instance.new("Frame")
 panel.Name = "MainPanel"
 panel.Size = UDim2.new(0, 370, 0, 540)
@@ -249,7 +229,7 @@ local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -50, 1, 0)
 titleLabel.Position = UDim2.new(0, 15, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "⚙️ Fabalta Tool v7.1"
+titleLabel.Text = "⚙️ Fabalta Tool v8.0"
 titleLabel.TextColor3 = THEME.Text
 titleLabel.TextSize = 16
 titleLabel.Font = THEME.FontBold
@@ -304,7 +284,7 @@ local function unlockSuite()
     isUnlocked = true
     keyFrame:Destroy()
     panel.Visible = true
-    notify("Rendszer Feloldva", "Üdvözöl a Fabalta Tool!", 4)
+    notify("Rendszer Feloldva", "Üdvözöl a Fabalta Tool v8.0!", 4)
 end
 
 submitKeyBtn.MouseButton1Click:Connect(function()
@@ -330,9 +310,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
     if not processed and input.KeyCode == mainToggleKey then setPanelVisibility(not isVisible) end
 end)
 
--- ----------------------------------------------------------------
---  UI ELEMEK KERETRENDSZERE
--- ----------------------------------------------------------------
 local tabs = {}
 local currentTab = nil
 
@@ -532,17 +509,12 @@ local function createButton(parentPage, text, callback)
     end)
 end
 
--- Fő kategóriák (Tabs)
 local pageMovement = createTab("Mozgás")
 local pageVisuals = createTab("Látvány")
+local pageCombat = createTab("Harcos")
 local pageUtility = createTab("Ezközök")
 local pageSettings = createTab("Beállítások")
 
--- ----------------------------------------------------------------
---  FUNKCIÓK MEGVALÓSÍTÁSA
--- ----------------------------------------------------------------
-
--- --- MOZGÁS FUNKCIÓK ---
 createSlider(pageMovement, "WalkSpeed", "⚡ Járási Sebesség", 16, 200, 16, function(val)
     local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
     if hum then hum.WalkSpeed = val end
@@ -553,7 +525,18 @@ createSlider(pageMovement, "JumpPower", "🦘 Ugrási Erő", 50, 300, 50, functi
     if hum then hum.UseJumpPower = true hum.JumpPower = val end
 end)
 
--- Repülés (Fly Engine)
+local infJumpEnabled = false
+createToggle(pageMovement, "InfJump", "🦘 Végtelen Ugrás", false, function(enabled)
+    infJumpEnabled = enabled
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if infJumpEnabled then
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end
+end)
+
 local flying, flySpeed, flyConn = false, 50, nil
 createSlider(pageMovement, "FlySpeed", "✈️ Repülési Sebesség", 20, 200, 50, function(val) flySpeed = val end)
 createToggle(pageMovement, "FlyMode", "✈️ Repülés Mód", false, function(enabled)
@@ -584,127 +567,172 @@ createToggle(pageMovement, "FlyMode", "✈️ Repülés Mód", false, function(e
     end
 end)
 
--- Teleportálás Játékosokhoz
-local tpContainer = Instance.new("Frame")
-tpContainer.Size = UDim2.new(1, 0, 0, 75)
-tpContainer.BackgroundTransparency = 1
-tpContainer.Parent = pageMovement
+local aimbotEnabled, aimbotConn = false, nil
+createToggle(pageCombat, "Aimbot", "🎯 Aimbot (Jobb Egérgomb Tartás)", false, function(enabled)
+    aimbotEnabled = enabled
+    if enabled then
+        aimbotConn = RunService.RenderStepped:Connect(function()
+            if aimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+                local closestPlayer, closestDist = nil, math.huge
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+                        local pos, onScreen = Camera:WorldToViewportPoint(p.Character.Head.Position)
+                        if onScreen then
+                            local dist = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+                            if dist < closestDist then
+                                closestDist = dist
+                                closestPlayer = p
+                            end
+                        end
+                    end
+                end
+                if closestPlayer and closestPlayer.Character:FindFirstChild("Head") then
+                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, closestPlayer.Character.Head.Position)
+                end
+            end
+        end)
+    else
+        if aimbotConn then aimbotConn:Disconnect() aimbotConn = nil end
+    end
+end)
 
-local tpLabel = Instance.new("TextLabel")
-tpLabel.Size = UDim2.new(1, 0, 0, 18)
-tpLabel.BackgroundTransparency = 1
-tpLabel.Text = "📍 Játékos Teleport"
-tpLabel.TextColor3 = THEME.Text
-tpLabel.TextSize = 13
-tpLabel.Font = THEME.FontRegular
-tpLabel.TextXAlignment = Enum.TextXAlignment.Left
-tpLabel.Parent = tpContainer
+local selectedFlingTarget, flinging, flingConn = nil, false, nil
 
-local selectedPlayer = nil
-local tpDropdownBtn = Instance.new("TextButton")
-tpDropdownBtn.Size = UDim2.new(1, 0, 0, 26)
-tpDropdownBtn.Position = UDim2.new(0, 0, 0, 22)
-tpDropdownBtn.BackgroundColor3 = THEME.AccentInactive
-tpDropdownBtn.Text = "Válassz Célpontot..."
-tpDropdownBtn.TextColor3 = THEME.TextSub
-tpDropdownBtn.TextSize = 11
-tpDropdownBtn.Font = THEME.FontRegular
-tpDropdownBtn.Parent = tpContainer
-local tpdCorner = Instance.new("UICorner") tpdCorner.CornerRadius = UDim.new(0, 6) tpdCorner.Parent = tpDropdownBtn
+local flingContainer = Instance.new("Frame")
+flingContainer.Size = UDim2.new(1, 0, 0, 75)
+flingContainer.BackgroundTransparency = 1
+flingContainer.Parent = pageCombat
 
-local executeTpBtn = Instance.new("TextButton")
-executeTpBtn.Size = UDim2.new(1, 0, 0, 24)
-executeTpBtn.Position = UDim2.new(0, 0, 0, 52)
-executeTpBtn.BackgroundColor3 = THEME.Accent
-executeTpBtn.Text = "Teleportálás Most"
-executeTpBtn.TextColor3 = THEME.Text
-executeTpBtn.TextSize = 11
-executeTpBtn.Font = THEME.FontBold
-executeTpBtn.Parent = tpContainer
-local etpCorner = Instance.new("UICorner") etpCorner.CornerRadius = UDim.new(0, 6) etpCorner.Parent = executeTpBtn
-registerAccent(executeTpBtn, "BackgroundColor3")
+local flingLabel = Instance.new("TextLabel")
+flingLabel.Size = UDim2.new(1, 0, 0, 18)
+flingLabel.BackgroundTransparency = 1
+flingLabel.Text = "🌀 Fling (Játékos Kilövése)"
+flingLabel.TextColor3 = THEME.Text
+flingLabel.TextSize = 13
+flingLabel.Font = THEME.FontRegular
+flingLabel.TextXAlignment = Enum.TextXAlignment.Left
+flingLabel.Parent = flingContainer
 
-local dropdownList = Instance.new("ScrollingFrame")
-dropdownList.Size = UDim2.new(1, 0, 0, 100)
-dropdownList.Position = UDim2.new(0, 0, 0, 48)
-dropdownList.BackgroundColor3 = THEME.Background
-dropdownList.BorderSizePixel = 1
-dropdownList.BorderColor3 = THEME.Border
-dropdownList.Visible = false
-dropdownList.ZIndex = 10
-dropdownList.Parent = tpContainer
+local flingDropdownBtn = Instance.new("TextButton")
+flingDropdownBtn.Size = UDim2.new(1, 0, 0, 26)
+flingDropdownBtn.Position = UDim2.new(0, 0, 0, 22)
+flingDropdownBtn.BackgroundColor3 = THEME.AccentInactive
+flingDropdownBtn.Text = "Célpont Kiválasztása..."
+flingDropdownBtn.TextColor3 = THEME.TextSub
+flingDropdownBtn.TextSize = 11
+flingDropdownBtn.Font = THEME.FontRegular
+flingDropdownBtn.Parent = flingContainer
 
-local dListLayout = Instance.new("UIListLayout") dListLayout.Parent = dropdownList
+local executeFlingBtn = Instance.new("TextButton")
+executeFlingBtn.Size = UDim2.new(1, 0, 0, 24)
+executeFlingBtn.Position = UDim2.new(0, 0, 0, 52)
+executeFlingBtn.BackgroundColor3 = THEME.Accent
+executeFlingBtn.Text = "🚀 Fling Indítása"
+executeFlingBtn.TextColor3 = THEME.Text
+executeFlingBtn.TextSize = 11
+executeFlingBtn.Font = THEME.FontBold
+executeFlingBtn.Parent = flingContainer
+registerAccent(executeFlingBtn, "BackgroundColor3")
 
-tpDropdownBtn.MouseButton1Click:Connect(function()
-    dropdownList.Visible = not dropdownList.Visible
-    if dropdownList.Visible then
-        for _, child in ipairs(dropdownList:GetChildren()) do
-            if child:IsA("TextButton") then child:Destroy() end
-        end
+local flingDropdownList = Instance.new("ScrollingFrame")
+flingDropdownList.Size = UDim2.new(1, 0, 0, 90)
+flingDropdownList.Position = UDim2.new(0, 0, 0, 48)
+flingDropdownList.BackgroundColor3 = THEME.Background
+flingDropdownList.BorderSizePixel = 1
+flingDropdownList.BorderColor3 = THEME.Border
+flingDropdownList.Visible = false
+flingDropdownList.ZIndex = 12
+flingDropdownList.Parent = flingContainer
+
+local fListLayout = Instance.new("UIListLayout") fListLayout.Parent = flingDropdownList
+
+flingDropdownBtn.MouseButton1Click:Connect(function()
+    flingDropdownList.Visible = not flingDropdownList.Visible
+    if flingDropdownList.Visible then
+        for _, child in ipairs(flingDropdownList:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer then
                 local pBtn = Instance.new("TextButton")
                 pBtn.Size = UDim2.new(1, 0, 0, 22)
                 pBtn.BackgroundColor3 = THEME.AccentInactive
-                pBtn.Text = p.DisplayName .. " (@" .. p.Name .. ")"
+                pBtn.Text = p.DisplayName
                 pBtn.TextColor3 = THEME.Text
                 pBtn.TextSize = 10
                 pBtn.Font = THEME.FontRegular
-                pBtn.ZIndex = 11
-                pBtn.Parent = dropdownList
+                pBtn.ZIndex = 13
+                pBtn.Parent = flingDropdownList
                 pBtn.MouseButton1Click:Connect(function()
-                    selectedPlayer = p
-                    tpDropdownBtn.Text = p.DisplayName
-                    dropdownList.Visible = false
+                    selectedFlingTarget = p
+                    flingDropdownBtn.Text = p.DisplayName
+                    flingDropdownList.Visible = false
                 end)
             end
         end
-        dropdownList.CanvasSize = UDim2.new(0, 0, 0, #Players:GetPlayers() * 22)
     end
 end)
 
-executeTpBtn.MouseButton1Click:Connect(function()
-    if selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+executeFlingBtn.MouseButton1Click:Connect(function()
+    if flinging then
+        flinging = false
+        if flingConn then flingConn:Disconnect() flingConn = nil end
+        executeFlingBtn.Text = "🚀 Fling Indítása"
+        notify("Fling", "Fling leállítva.", 2)
+        return
+    end
+
+    if selectedFlingTarget and selectedFlingTarget.Character and selectedFlingTarget.Character:FindFirstChild("HumanoidRootPart") then
+        flinging = true
+        executeFlingBtn.Text = "🛑 Fling Leállítása"
+        notify("Fling", "Fling aktív rajta: " .. selectedFlingTarget.DisplayName, 3)
+
         local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if myRoot then
-            myRoot.CFrame = selectedPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-            notify("Teleport", "Sikeres teleportálás hozzá: " .. selectedPlayer.DisplayName, 2)
-        end
-    else
-        notify("Teleport Hiba", "Érvénytelen vagy hiányzó célpont.", 2)
-    end
-end)
-
--- Szabad kamera (Freecam)
-local freecamEnabled, freecamConn = false, nil
-createToggle(pageMovement, "Freecam", "🎥 Szabad Kamera", false, function(enabled)
-    freecamEnabled = enabled
-    if enabled then
-        Camera.CameraType = Enum.CameraType.Scriptable
-        freecamConn = RunService.RenderStepped:Connect(function()
-            if not freecamEnabled then return end
-            local speed = 1.5
-            local camCF = Camera.CFrame
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then camCF = camCF * CFrame.new(0,0,-speed) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then camCF = camCF * CFrame.new(0,0,speed) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then camCF = camCF * CFrame.new(-speed,0,0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then camCF = camCF * CFrame.new(speed,0,0) end
-            Camera.CFrame = camCF
+        local angle = 0
+        flingConn = RunService.Heartbeat:Connect(function()
+            if not flinging or not myRoot or not selectedFlingTarget.Character or not selectedFlingTarget.Character:FindFirstChild("HumanoidRootPart") then
+                flinging = false
+                if flingConn then flingConn:Disconnect() end
+                executeFlingBtn.Text = "🚀 Fling Indítása"
+                return
+            end
+            local targetRoot = selectedFlingTarget.Character.HumanoidRootPart
+            angle = angle + 100
+            myRoot.Velocity = Vector3.new(10000, 10000, 10000)
+            myRoot.CFrame = targetRoot.CFrame * CFrame.Angles(0, math.rad(angle), 0) * CFrame.new(0, 0, 1.5)
         end)
     else
-        if freecamConn then freecamConn:Disconnect() freecamConn = nil end
-        Camera.CameraType = Enum.CameraType.Custom
+        notify("Fling Hiba", "Érvénytelen célpont!", 2)
     end
 end)
 
+createToggle(pageCombat, "Godmode", "🛡️ Godmode (Halhatatlanság)", false, function(enabled)
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if hum then
+        if enabled then
+            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+            notify("Godmode", "Godmode Aktiválva.", 2)
+        else
+            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+            notify("Godmode", "Godmode Deaktiválva.", 2)
+        end
+    end
+end)
 
--- --- LÁTVÁNY FUNKCIÓK ---
+local isInvisible = false
+createToggle(pageCombat, "Invisibility", "👻 Láthatatlanság", false, function(enabled)
+    isInvisible = enabled
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") or part:IsA("Decal") then
+                part.Transparency = enabled and 1 or 0
+            end
+        end
+        notify("Láthatatlanság", enabled and "Most láthatatlan vagy!" or "Újra látható vagy.", 2)
+    end
+end)
 
--- Látószög (FOV)
 createSlider(pageVisuals, "FOV", "🔍 Látószög (FOV)", 60, 120, 70, function(val) Camera.FieldOfView = val end)
 
--- Player ESP & Chams
 local espEnabled, espCache = false, {}
 local function removeEsp(player)
     if espCache[player] then
@@ -744,60 +772,8 @@ createToggle(pageVisuals, "ESP", "👁️ Játékos ESP (Kiemelés)", false, fun
     end
 end)
 
--- Nyomvonal Vonalak (Tracers)
-local tracersEnabled, tracerLines, tracerConn = false, {}
-createToggle(pageVisuals, "Tracers", "📐 Nyomvonalak (Tracers)", false, function(enabled)
-    tracersEnabled = enabled
-    if enabled then
-        tracerConn = RunService.RenderStepped:Connect(function()
-            for _, line in pairs(tracerLines) do line.Visible = false end
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                    local targetPos, onScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
-                    if onScreen then
-                        local line = tracerLines[p]
-                        if not line then
-                            line = Instance.new("Frame")
-                            line.AnchorPoint = Vector2.new(0.5, 0.5)
-                            line.BackgroundColor3 = THEME.Accent
-                            line.BorderSizePixel = 0
-                            line.Parent = screenGui
-                            tracerLines[p] = line
-                        end
-                        local startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                        local endPos = Vector2.new(targetPos.X, targetPos.Y)
-                        local distance = (endPos - startPos).Magnitude
-                        local angle = math.atan2(endPos.Y - startPos.Y, endPos.X - startPos.X)
+createSlider(pageVisuals, "TimeOfDay", "☀️ Napszak (Óra)", 0, 24, 14, function(val) Lighting.ClockTime = val end)
 
-                        line.Size = UDim2.new(0, distance, 0, 1.5)
-                        line.Position = UDim2.new(0, (startPos.X + endPos.X) / 2, 0, (startPos.Y + endPos.Y) / 2)
-                        line.Rotation = math.deg(angle)
-                        line.Visible = true
-                    end
-                end
-            end
-        end)
-    else
-        if tracerConn then tracerConn:Disconnect() tracerConn = nil end
-        for _, line in pairs(tracerLines) do line:Destroy() end
-        table.clear(tracerLines)
-    end
-end)
-
--- Világítás Módosítása
-createSlider(pageVisuals, "TimeOfDay", "☀️ Napszak (Óra)", 0, 24, 14, function(val)
-    Lighting.ClockTime = val
-end)
-
-createToggle(pageVisuals, "NoFog", "🌫️ Köd & Árnyékok Törlése", false, function(enabled)
-    Lighting.FogEnd = enabled and 1e6 or 10000
-    Lighting.GlobalShadows = not enabled
-end)
-
-
--- --- ESZKÖZÖK (UTILITY) ---
-
--- Server Hop & Rejoin
 createButton(pageUtility, "🔄 Újracsatlakozás (Rejoin)", function()
     notify("Szerver", "Újracsatlakozás a szerverre...", 2)
     TeleportService:Teleport(game.PlaceId, LocalPlayer)
@@ -816,80 +792,6 @@ createButton(pageUtility, "🌐 Szerver Váltás (Server Hop)", function()
     end)
 end)
 
--- Btools (Kattintásos Törlés)
-local btoolsEnabled = false
-createToggle(pageUtility, "Btools", "🔨 Btools (Alt+Kattintás a Törléshez)", false, function(enabled) btoolsEnabled = enabled end)
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed or not btoolsEnabled then return end
-    if input.UserInputType == Enum.UserInputType.MouseButton1 and UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) then
-        local mousePos = UserInputService:GetMouseLocation()
-        local ray = Camera:ViewportPointToRay(mousePos.X, mousePos.Y)
-        local res = workspace:Raycast(ray.Origin, ray.Direction * 2000)
-        if res and res.Instance and not res.Instance:IsA("Terrain") then
-            res.Instance:Destroy()
-            notify("Btools", "Elem törölve helyileg.", 2)
-        end
-    end
-end)
-
--- Makró Rögzítő (Macro Player)
-local macroRecording, macroPlaying = false, false
-local recordedInputs = {}
-
-createButton(pageUtility, "🔴 Makró Rögzítése", function()
-    if macroRecording then
-        macroRecording = false
-        notify("Makró Rögzítő", #recordedInputs .. " billentyűleütés elmentve.", 3)
-    else
-        table.clear(recordedInputs)
-        macroRecording = true
-        notify("Makró Rögzítő", "Rögzítés... Nyomj meg billentyűket.", 3)
-    end
-end)
-
-UserInputService.InputBegan:Connect(function(input, processed)
-    if macroRecording and not processed and input.UserInputType == Enum.UserInputType.Keyboard then
-        table.insert(recordedInputs, { Key = input.KeyCode, Delay = 0.2 })
-    end
-end)
-
-createButton(pageUtility, "▶️ Makró Lejátszása", function()
-    if #recordedInputs == 0 then notify("Makró Rögzítő", "Nincs rögzített makró!", 2) return end
-    if macroPlaying then return end
-    macroPlaying = true
-    notify("Makró Rögzítő", "Makró lejátszása...", 2)
-    task.spawn(function()
-        for _, action in ipairs(recordedInputs) do
-            VirtualUser:CaptureController()
-            VirtualUser:SetKeyDown(action.Key.Name)
-            task.wait(0.05)
-            VirtualUser:SetKeyUp(action.Key.Name)
-            task.wait(action.Delay)
-        end
-        macroPlaying = false
-        notify("Makró Rögzítő", "Makró befejeződött.", 2)
-    end)
-end)
-
--- Auto-Clicker
-local autoClicking, clickCps, clickTask = false, 10, nil
-createSlider(pageUtility, "ClickCPS", "🖱️ Auto-Clicker Gyorsaság (CPS)", 1, 30, 10, function(val) clickCps = val end)
-createToggle(pageUtility, "AutoClicker", "🖱️ Auto-Clicker Kapcsoló", false, function(enabled)
-    autoClicking = enabled
-    if enabled then
-        clickTask = task.spawn(function()
-            while autoClicking do
-                VirtualUser:CaptureController()
-                VirtualUser:ClickButton1(Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2))
-                task.wait(1 / clickCps)
-            end
-        end)
-    else
-        if clickTask then task.cancel(clickTask) clickTask = nil end
-    end
-end)
-
--- Anti-AFK
 local afkConn
 createToggle(pageUtility, "AntiAfk", "💤 Anti-AFK (Kidobás Elleni Védelem)", false, function(enabled)
     if enabled then
@@ -901,10 +803,6 @@ createToggle(pageUtility, "AntiAfk", "💤 Anti-AFK (Kidobás Elleni Védelem)",
     elseif afkConn then afkConn:Disconnect() afkConn = nil end
 end)
 
-
--- --- BEÁLLÍTÁSOK ---
-
--- Téma Színválasztó
 local themePaletteContainer = Instance.new("Frame")
 themePaletteContainer.Size = UDim2.new(1, 0, 0, 40)
 themePaletteContainer.BackgroundTransparency = 1
@@ -938,46 +836,3 @@ for i, colData in ipairs(colors) do
     local cCorner = Instance.new("UICorner") cCorner.CornerRadius = UDim.new(1, 0) cCorner.Parent = cBtn
     cBtn.MouseButton1Click:Connect(function() setAccentColor(colData.Color) end)
 end
-
--- Menü Gomb Átállítása
-local keybindContainer = Instance.new("Frame")
-keybindContainer.Size = UDim2.new(1, 0, 0, 36)
-keybindContainer.BackgroundTransparency = 1
-keybindContainer.Parent = pageSettings
-
-local kbLabel = Instance.new("TextLabel")
-kbLabel.Size = UDim2.new(0.5, 0, 1, 0)
-kbLabel.BackgroundTransparency = 1
-kbLabel.Text = "⌨️ UI Megnyitása Gomb"
-kbLabel.TextColor3 = THEME.Text
-kbLabel.TextSize = 13
-kbLabel.Font = THEME.FontRegular
-kbLabel.TextXAlignment = Enum.TextXAlignment.Left
-kbLabel.Parent = keybindContainer
-
-local kbBtn = Instance.new("TextButton")
-kbBtn.Size = UDim2.new(0.45, 0, 0.8, 0)
-kbBtn.Position = UDim2.new(0.55, 0, 0.1, 0)
-kbBtn.BackgroundColor3 = THEME.AccentInactive
-kbBtn.Text = mainToggleKey.Name
-kbBtn.TextColor3 = THEME.Text
-kbBtn.TextSize = 12
-kbBtn.Font = THEME.FontBold
-kbBtn.Parent = keybindContainer
-local kbCorner = Instance.new("UICorner") kbCorner.CornerRadius = UDim.new(0, 6) kbCorner.Parent = kbBtn
-
-local listeningForToggle = false
-kbBtn.MouseButton1Click:Connect(function()
-    kbBtn.Text = "Nyomj gombot..."
-    listeningForToggle = true
-end)
-
-UserInputService.InputBegan:Connect(function(input, processed)
-    if not listeningForToggle or input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-    mainToggleKey = input.KeyCode
-    kbBtn.Text = mainToggleKey.Name
-    footer.Text = "Nyomd meg a [" .. mainToggleKey.Name .. "] gombot az elrejtéshez"
-    Config.ToggleKey = mainToggleKey.Name
-    saveConfig()
-    listeningForToggle = false
-end)
