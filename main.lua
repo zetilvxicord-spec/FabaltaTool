@@ -1,5 +1,5 @@
 --[[
-    Fabalta Tool v10.1 – Max Edition (Refactored & Completed)
+    Fabalta Tool v10.1 – Max Edition (Refactored & Fixed)
     KEY IS HARDCODED INSIDE THE SCRIPT
 ]]
 
@@ -258,7 +258,7 @@ closeBtn.Size = UDim2.new(0, 22, 0, 22)
 closeBtn.Position = UDim2.new(1, -28, 0.5, -11)
 closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeBtn.BorderSizePixel = 0
-closeBtn.Text = "✕"
+closeBtn.Text = "X" -- Fixed: Replaced unicode symbol with standard "X"
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeBtn.TextSize = 11
 closeBtn.Font = THEME.FontBold
@@ -649,52 +649,17 @@ LocalPlayer.CharacterAdded:Connect(function()
     applyAnimationPack()
 end)
 
--- ========== ANIMATION PACK SYSTEM ==========
-local currentAnimations = {}
-
-local function stopAllAnimations(animator)
-    if not animator then return end
-    for _, track in pairs(currentAnimations) do
-        pcall(function() track:Stop() end)
-    end
-    currentAnimations = {}
-    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-        pcall(function() track:Stop() end)
-    end
-end
-
-local function loadAnimation(animator, animId)
-    if not animator or animId == "" then return nil end
-    local anim
-    pcall(function()
-        anim = Instance.new("Animation")
-        anim.AnimationId = "rbxassetid://" .. animId:gsub("%D+", "")
-    end)
-    if not anim then return nil end
-    local track
-    pcall(function()
-        track = animator:LoadAnimation(anim)
-    end)
-    return track
-end
-
+-- ========== ANIMATION PACK SYSTEM (NATIVE ANIMATE SCRIPT OVERRIDE) ==========
 applyAnimationPack = function()
-    local hum = getHumanoid()
-    if not hum then return end
-    local animator = hum:FindFirstChildOfClass("Animator")
-    if not animator then
-        animator = Instance.new("Animator")
-        animator.Parent = hum
-    end
-
-    stopAllAnimations(animator)
+    local char = getChar()
+    if not char then return end
+    local animate = char:FindFirstChild("Animate")
+    if not animate then return end
 
     local pack = Config.AnimPack
     local idleId, walkId, runId, jumpId
 
-    if pack == "Default" then
-        -- use default game animations
-    elseif pack == "Ninja" then
+    if pack == "Ninja" then
         idleId = "12114635098"
         walkId = "12114635100"
         runId = "12114635102"
@@ -716,21 +681,33 @@ applyAnimationPack = function()
         jumpId = Config.AnimJump
     end
 
-    local function tryLoad(id, priority)
-        if id and id ~= "" then
-            local track = loadAnimation(animator, id)
-            if track then
-                track.Priority = priority or Enum.AnimationPriority.Idle
-                pcall(function() track:Play() end)
-                currentAnimations[#currentAnimations+1] = track
+    pcall(function()
+        if pack == "Default" then
+            -- Let native handle default
+            return
+        end
+
+        if idleId and idleId ~= "" and animate:FindFirstChild("idle") then
+            for _, anim in ipairs(animate.idle:GetChildren()) do
+                if anim:IsA("Animation") then anim.AnimationId = "rbxassetid://" .. idleId:gsub("%D+", "") end
             end
         end
-    end
-
-    tryLoad(idleId, Enum.AnimationPriority.Idle)
-    tryLoad(walkId, Enum.AnimationPriority.Movement)
-    tryLoad(runId, Enum.AnimationPriority.Movement)
-    tryLoad(jumpId, Enum.AnimationPriority.Action)
+        if walkId and walkId ~= "" and animate:FindFirstChild("walk") then
+            for _, anim in ipairs(animate.walk:GetChildren()) do
+                if anim:IsA("Animation") then anim.AnimationId = "rbxassetid://" .. walkId:gsub("%D+", "") end
+            end
+        end
+        if runId and runId ~= "" and animate:FindFirstChild("run") then
+            for _, anim in ipairs(animate.run:GetChildren()) do
+                if anim:IsA("Animation") then anim.AnimationId = "rbxassetid://" .. runId:gsub("%D+", "") end
+            end
+        end
+        if jumpId and jumpId ~= "" and animate:FindFirstChild("jump") then
+            for _, anim in ipairs(animate.jump:GetChildren()) do
+                if anim:IsA("Animation") then anim.AnimationId = "rbxassetid://" .. jumpId:gsub("%D+", "") end
+            end
+        end
+    end)
 end
 
 -- ===== MOZGÁS =====
@@ -932,7 +909,6 @@ createToggle(pageVisuals, "Fullbright", "☀️ Teljes Fényerő (Fullbright)", 
     Lighting.GlobalShadows = not enabled
 end)
 
--- ESP System Implementation
 local espHighlights = {}
 createToggle(pageVisuals, "ESP", "👥 Játékos ESP (Kiemelés)", false, function(enabled)
     Config.ESP = enabled
@@ -991,8 +967,6 @@ createButton(pageUtility, "📦 Reset Karakter", function()
 end)
 
 -- ===== ANIMÁCIÓK =====
-local animPacksList = {"Default", "Ninja", "Robot", "Cartoon", "Custom"}
--- Simple dropdown or switch logic via buttons/textbox configuration for animation packages
 createButton(pageAnim, "🔄 Animáció Csomag Frissítése", function()
     applyAnimationPack()
     notify("Animációk", "Csomag sikeresen alkalmazva.", 2)
@@ -1014,5 +988,4 @@ createButton(pageSettings, "💾 Konfiguráció Mentése", function()
     notify("Mentés", "A beállítások elmentve.", 2)
 end)
 
--- Initialize core settings on launch
 applyAllSettings()
